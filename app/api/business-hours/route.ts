@@ -8,13 +8,27 @@ import { supabaseServer } from '@/lib/supabase/client'
 export async function GET(req: NextRequest) {
   try {
     const sb = supabaseServer()
+    // 優先從 restaurants.settings / restaurants.business_hours 取出
+    const restaurantId = process.env.RESTAURANT_ID || null
+    let rsQuery = sb.from('restaurants').select('settings, business_hours').limit(1)
+    rsQuery = restaurantId ? rsQuery.eq('id', restaurantId) : rsQuery
+    const { data: rsData } = await rsQuery.maybeSingle()
+
+    if (rsData) {
+      const settings = (rsData as any).settings || null
+      const closuresRes = await sb.from('restaurant_closures').select('date, reason').order('date', { ascending: true })
+      const closures = closuresRes.data || []
+      return NextResponse.json({ settings, closures })
+    }
+
+    // 後備：舊表
     const { data: settings, error: e1 } = await sb
       .from('restaurant_settings')
       .select('open_time, close_time, slot_interval_min, dining_duration_min')
       .limit(1)
       .maybeSingle()
 
-    if (e1 && e1.code !== 'PGRST116') throw e1 // ignore table missing in GET; return null settings
+    if (e1 && e1.code !== 'PGRST116') throw e1
 
     const { data: closures, error: e2 } = await sb
       .from('restaurant_closures')

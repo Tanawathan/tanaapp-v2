@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
+import TanaDateInput from '../../components/TanaDateInput'
 
 export default function BookPage() {
   const [date, setDate] = useState<string>('')
@@ -31,24 +32,15 @@ export default function BookPage() {
     totalAvailable: number;
     message: string;
   } | null>(null)
+  const [recLoading, setRecLoading] = useState(false)
   const [showRecommendations, setShowRecommendations] = useState(false)
   const [step, setStep] = useState<'search' | 'details'>('search')
-  const [period, setPeriod] = useState<'all' | 'lunch' | 'dinner'>('all')
+  // 不再區分午晚餐
 
-  // 後端會依營業時間動態回傳可預約時段；
-  // 這裡的 timeOptions 僅作為「尚未載入推薦時段」的備用顯示，
-  // 依規則：關門 21:00 並需保留 90 分鐘 → 最晚 19:30。
-  const timeOptions = useMemo(() => ['17:00','17:30','18:00','18:30','19:00','19:30'], [])
   const canSubmit = date && time && name.trim() && phone.trim() && party > 0 && tableAvailability?.hasAvailable
 
   // 依時間字串判斷區段
-  const getPeriod = (t: string): 'lunch' | 'dinner' | 'other' => {
-    const [hh, mm] = t.split(':').map(Number)
-    const mins = hh * 60 + (mm || 0)
-    if (mins >= 11 * 60 && mins < 15 * 60) return 'lunch'
-    if (mins >= 17 * 60 && mins <= 21 * 60 + 30) return 'dinner'
-    return 'other'
-  }
+  // 取消 period 分類
 
   // 取得推薦/可用時段（只需要日期與人數）
   async function getRecommendations() {
@@ -58,6 +50,7 @@ export default function BookPage() {
     }
     
     try {
+      setRecLoading(true)
       const res = await fetch(`/api/recommendations?date=${encodeURIComponent(date)}&partySize=${party}&preferredTime=${encodeURIComponent(time)}`)
       const json = await res.json()
       
@@ -72,6 +65,8 @@ export default function BookPage() {
       }
     } catch (error) {
       console.error('取得推薦時段錯誤:', error)
+    } finally {
+      setRecLoading(false)
     }
   }
 
@@ -233,11 +228,12 @@ export default function BookPage() {
             <h2 className="mb-4 text-base font-semibold text-gray-900">選擇日期與時段</h2>
 
             <label className="mb-1 block text-sm text-gray-700">用餐日期</label>
-            <input
-              type="date"
-              className="w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            <TanaDateInput
               value={date}
-              onChange={e => { setDate(e.target.value); setStep('search') }}
+              onChange={(v: string) => { setDate(v); setStep('search') }}
+              min={new Date().toISOString().split('T')[0]}
+              max={(() => { const d=new Date(); d.setDate(d.getDate()+30); return d.toISOString().split('T')[0] })()}
+              className="w-full"
             />
 
             <label className="mt-4 mb-1 block text-sm text-gray-700">人數</label>
@@ -247,34 +243,32 @@ export default function BookPage() {
               <button type="button" onClick={() => setParty(Math.min(20, party + 1))} className="h-10 w-10 select-none text-lg leading-none hover:bg-gray-50" aria-label="增加人數">+</button>
             </div>
 
-            {/* 時段 Tabs */}
-            <div className="mt-4 flex gap-2 text-sm">
-              {(['all','lunch','dinner'] as const).map(p => (
-                <button key={p} onClick={() => setPeriod(p)} className={`px-3 py-1.5 rounded-full border ${period===p?'border-indigo-600 bg-indigo-50 text-indigo-700':'hover:bg-gray-50'}`}>
-                  {p==='all'?'全天':p==='lunch'?'中午':'晚上'}
-                </button>
-              ))}
-            </div>
-
-            {/* 可預約時段清單 */}
+            {/* 可預約時段清單（依 Supabase business_hours 驅動） */}
             <div className="mt-4">
-              <div className="grid grid-cols-3 gap-2">
-                {(recommendations?.availableSlots || timeOptions.map(t => ({ time:t, available: true })) )
-                  .filter(s => period==='all' ? true : getPeriod(s.time)===period)
-                  .map(s => (
-                    <button
-                      key={s.time}
-                      type="button"
-                      disabled={!s.available}
-                      onClick={() => { setTime(s.time); setStep('details') }}
-                      className={`px-3 py-2 rounded-md text-sm border ${s.available? 'hover:bg-gray-50' : 'opacity-50 cursor-not-allowed'}`}
-                    >
-                      {s.time}
-                    </button>
-                  ))}
-              </div>
-              {!recommendations && (
-                <p className="text-xs text-gray-500 mt-2">提示：先選日期與人數即可顯示可預約時段</p>
+              {recLoading ? (
+                <div className="text-sm text-gray-500">載入可預約時段中…</div>
+              ) : (
+                <>
+                  <div className="grid grid-cols-3 gap-2">
+                    {(recommendations?.availableSlots ?? []).map(s => (
+                      <button
+                        key={s.time}
+                        type="button"
+                        disabled={!s.available}
+                        onClick={() => { setTime(s.time); setStep('details') }}
+                        className={`px-3 py-2 rounded-md text-sm border ${s.available? 'hover:bg-gray-50' : 'opacity-50 cursor-not-allowed'}`}
+                      >
+                        {s.time}
+                      </button>
+                    ))}
+                  </div>
+                  {!recommendations && (
+                    <p className="text-xs text-gray-500 mt-2">提示：先選日期與人數即可顯示可預約時段</p>
+                  )}
+                  {recommendations && (recommendations.availableSlots?.length ?? 0) === 0 && (
+                    <p className="text-xs text-gray-600 mt-2">當日不營業或目前沒有可預約時段</p>
+                  )}
+                </>
               )}
             </div>
           </div>

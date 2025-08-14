@@ -21,6 +21,8 @@ type HoursConfig = {
   diningDurationMin: number // 最低保留用餐時間（分鐘）
 }
 
+type HoursConfigMulti = HoursConfig & { segments?: Array<{ start: string; end: string }> }
+
 const DEFAULT_HOURS: HoursConfig = {
   start: '17:00',
   end: '21:00',
@@ -54,8 +56,109 @@ function floorToInterval(date: Date, intervalMin: number): Date {
   return d
 }
 
-async function loadBusinessHours() : Promise<HoursConfig> {
+// 嘗試從 restaurants 表以當日（星期）取得開關門時間與設定
+async function loadBusinessHoursForDate(date: string) : Promise<HoursConfigMulti> {
   const supabase = supabaseServer()
+  const weekdayIdx = new Date(date + 'T00:00:00').getDay() // 0(日)-6(六)
+  const weekdayKeys = ['sun','mon','tue','wed','thu','fri','sat'] as const
+  const weekdayKey = weekdayKeys[weekdayIdx]
+  const weekdayAliases: Record<string, (string|number)[]> = {
+    sun: ['sun','sunday','0','日','週日','星期日',0],
+    mon: ['mon','monday','1','一','週一','星期一',1],
+    tue: ['tue','tuesday','2','二','週二','星期二',2],
+    wed: ['wed','wednesday','3','三','週三','星期三',3],
+    thu: ['thu','thursday','4','四','週四','星期四',4],
+    fri: ['fri','friday','5','五','週五','星期五',5],
+    sat: ['sat','saturday','6','六','週六','星期六',6],
+  }
+  const restaurantId = process.env.RESTAURANT_ID || null
+
+  // 1) restaurants 表 (business_hours, settings)
+  try {
+    const base = supabase.from('restaurants').select('business_hours, settings').limit(1)
+    const primary = restaurantId ? base.eq('id', restaurantId) : base
+    let { data, error } = await primary.maybeSingle()
+    if (error || !data) {
+      // fallback: take the first row without filtering
+      const res = await supabase.from('restaurants').select('business_hours, settings').limit(1).maybeSingle()
+      data = res.data
+      error = res.error
+    }
+    if (!error && data) {
+  const settings = (data as any).settings || {}
+  const bh = (data as any).business_hours || {}
+
+      // 從 settings 推出 interval 與 diningDurationMin
+      const interval = settings.slot_interval_min ?? settings.slot_interval ?? settings.interval ?? DEFAULT_HOURS.interval
+      const diningDurationMin = settings.dining_duration_min ?? settings.dining_duration ?? settings.diningDurationMin ?? DEFAULT_HOURS.diningDurationMin
+
+      // 依不同結構嘗試取得當日 open/close
+      const resolveOpenClose = (source: any): { start?: string; end?: string }[] => {
+        if (!source) return []
+        const pick = (v: any): { start?: string; end?: string } => ({
+          start: v?.open_time ?? v?.opening_time ?? v?.open ?? v?.open_at ?? v?.start ?? v?.from ?? undefined,
+          end: v?.close_time ?? v?.closing_time ?? v?.close ?? v?.close_at ?? v?.end ?? v?.to ?? undefined,
+        })
+
+        // 常見 weekly map: { mon: { open_time, close_time } } 或 weekly/ days 陣列
+        const candidates: any[] = []
+        const container = source.weekly || source.weekdays || source.days || source
+        const aliases = weekdayAliases[weekdayKey]
+        // 物件鍵名匹配
+        for (const key of aliases) {
+          if (container && typeof container === 'object' && key in container) {
+            candidates.push(container[key as any])
+          }
+        }
+        // 陣列形態：[{day: 'mon', segments:[...]}] / [{weekday:1, start, end}]
+        if (Array.isArray(container)) {
+          for (const item of container) {
+            const d = (item?.day ?? item?.weekday ?? item?.wday ?? item?.dow)
+            if (aliases.includes(d) || aliases.includes(Number(d))) {
+              candidates.push(item)
+            }
+          }
+        }
+
+        const dayConf = candidates.length ? candidates[0] : null
+        if (dayConf) {
+          if (Array.isArray(dayConf)) {
+            return dayConf.map((seg: any) => pick(seg)).filter(s => s.start && s.end)
+          }
+          // 可能有 segments 陣列
+          if (Array.isArray(dayConf.segments)) {
+            return dayConf.segments.map((seg: any) => pick(seg)).filter((s: any) => s.start && s.end)
+          }
+          return [pick(dayConf)].filter((s: any) => s.start && s.end)
+        }
+        // 若直接是 { open_time, close_time }
+        const single = pick(source)
+        return single.start && single.end ? [single] : []
+      }
+
+      const segs = resolveOpenClose(bh)
+      // 若 business_hours 沒有該日，嘗試 settings 的 open_time/close_time
+      const settingsStart = settings.open_time ?? settings.opening_time
+      const settingsEnd = settings.close_time ?? settings.closing_time
+      if (!segs.length && settingsStart && settingsEnd) {
+        segs.push({ start: settingsStart, end: settingsEnd })
+      }
+      const firstStart = segs[0]?.start ?? settingsStart ?? DEFAULT_HOURS.start
+      const lastEnd = segs[segs.length - 1]?.end ?? settingsEnd ?? DEFAULT_HOURS.end
+
+      return {
+        start: firstStart,
+        end: lastEnd,
+        interval: Number(interval) || DEFAULT_HOURS.interval,
+        diningDurationMin: Number(diningDurationMin) || DEFAULT_HOURS.diningDurationMin,
+        segments: segs as Array<{ start: string; end: string }>
+      }
+    }
+  } catch {
+    // ignore and continue
+  }
+
+  // 2) 舊的表與欄位（向後相容）
   // 依序嘗試多個可能的表與欄位命名，若不存在則使用預設
   const tries: Array<{
     table: string
@@ -124,26 +227,27 @@ async function loadBusinessHours() : Promise<HoursConfig> {
 }
 
 // 生成時段選項（以「關門時間 - 用餐時間」為上限）
-function generateTimeSlots(cfg: HoursConfig): string[] {
+function generateTimeSlots(cfg: HoursConfigMulti): string[] {
   const slots: string[] = []
-  const start = toDateFromHHMM(cfg.start)
-  const close = toDateFromHHMM(cfg.end)
+  const segments = (cfg.segments && cfg.segments.length > 0)
+    ? cfg.segments
+    : [{ start: cfg.start, end: cfg.end }]
 
-  // 最後可預約時間 = 關門時間 - 用餐時間（向下取至間隔）
-  const lastStart = new Date(close.getTime() - cfg.diningDurationMin * 60 * 1000)
-  const lastFloored = floorToInterval(lastStart, cfg.interval)
-
-  if (lastFloored <= start) {
-    // 若設定異常導致沒有任何時段，回傳空陣列
-    return []
+  for (const seg of segments) {
+    const start = toDateFromHHMM(seg.start)
+    const close = toDateFromHHMM(seg.end)
+    const lastStart = new Date(close.getTime() - cfg.diningDurationMin * 60 * 1000)
+    const lastFloored = floorToInterval(lastStart, cfg.interval)
+    if (lastFloored <= start) continue
+    let current = new Date(start)
+    while (current <= lastFloored) {
+      slots.push(toHHMM(current))
+      current.setMinutes(current.getMinutes() + cfg.interval)
+    }
   }
-
-  let current = new Date(start)
-  while (current <= lastFloored) {
-    slots.push(toHHMM(current))
-    current.setMinutes(current.getMinutes() + cfg.interval)
-  }
-  return slots
+  const uniq = Array.from(new Set(slots))
+  uniq.sort()
+  return uniq
 }
 
 // 日內資料 + 記憶體判斷 30 分鐘內是否已有預約
@@ -192,8 +296,8 @@ export async function GET(request: NextRequest) {
       }, { status: 400 })
     }
 
-  // 讀取營業時間（若無設定則使用預設：17:00 ~ 21:00，間隔 30 分鐘，用餐 90 分鐘）
-    const hours = await loadBusinessHours()
+  // 讀取營業時間（優先 restaurants.business_hours/settings；否則使用預設或相容表）
+  const hours = await loadBusinessHoursForDate(date)
     const timeSlots = generateTimeSlots(hours)
 
     // 讀取當日預約（僅該餐廳、有效狀態），之後在記憶體內做 30 分鐘判定
@@ -308,3 +412,5 @@ export async function GET(request: NextRequest) {
     }, { status: 500 })
   }
 }
+
+export const dynamic = 'force-dynamic'

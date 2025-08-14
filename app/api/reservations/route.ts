@@ -192,13 +192,15 @@ export async function POST(req: Request) {
       restaurant_id: restaurantId,
       customer_name: payload.customer_name,
       customer_phone: payload.customer_phone,
-      customer_notes: payload.customer_email ? `Email: ${payload.customer_email}${customerData ? ` | 會員ID: ${customerData.customer_id}` : ''}` : customerData ? `會員ID: ${customerData.customer_id}` : null,
+      customer_email: payload.customer_email || null,
+      customer_notes: customerData ? `會員ID: ${customerData.customer_id}` : null,
       // customer_id: customerData?.customer_id || null, // 移除：資料表中沒有此欄位
       party_size: payload.party_size,
       reservation_time: reservationDateTime,
       // table_id: availableTable.id, // 暫時移除，因為資料庫table_id是UUID類型
       duration_minutes: 120, // 預設 2 小時
-      status: 'pending',
+      status: 'confirmed',
+      confirmed_at: new Date().toISOString(),
       special_requests: payload.special_requests || null,
       deposit_amount: 0.00,
       deposit_paid: false,

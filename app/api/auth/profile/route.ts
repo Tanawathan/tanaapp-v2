@@ -127,6 +127,8 @@ export async function GET(request: NextRequest) {
   }
 }
 
+export const dynamic = 'force-dynamic'
+
 // PUT - 更新會員資料
 export async function PUT(request: NextRequest) {
   try {

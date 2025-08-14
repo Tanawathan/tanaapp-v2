@@ -2,6 +2,10 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import dynamic from 'next/dynamic'
+
+// 客端入場證元件（避免 SSR 問題）
+const PassModal = dynamic(() => import('../../components/PassModal'), { ssr: false })
 
 interface Customer {
   customer_id: string;
@@ -462,7 +466,8 @@ export default function MemberPage() {
                           <div className="text-xs text-gray-400">
                             預約時間：{new Date(reservation.created_at).toLocaleDateString('zh-TW')}
                           </div>
-                          
+                          {/* 入場證（所有狀態皆可查看） */}
+                          <div className="mt-1"><PassModal res={reservation} /></div>
                           {/* 操作按鈕 */}
                           {(reservation.status === 'pending' || reservation.status === 'confirmed') && (
                             <div className="flex gap-2 mt-2">

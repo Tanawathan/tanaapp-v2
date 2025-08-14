@@ -9,7 +9,8 @@ export default function BookPage() {
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
   const [email, setEmail] = useState('')
-  const [party, setParty] = useState(2)
+  const [adults, setAdults] = useState(2)
+  const [children, setChildren] = useState(0)
   const [specialRequests, setSpecialRequests] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -24,6 +25,7 @@ export default function BookPage() {
     availableTables: any[];
     message: string;
   } | null>(null)
+  const [selectedTableIds, setSelectedTableIds] = useState<string[]>([])
   const [checkingTables, setCheckingTables] = useState(false)
   const [recommendations, setRecommendations] = useState<{
     availableSlots: Array<{ time: string; available: boolean }>;
@@ -37,21 +39,51 @@ export default function BookPage() {
   const [step, setStep] = useState<'search' | 'details'>('search')
   // 不再區分午晚餐
 
-  const canSubmit = date && time && name.trim() && phone.trim() && party > 0 && tableAvailability?.hasAvailable
+  // 成人/孩童選擇；總數上限 8 位
+  const totalParty = useMemo(() => Math.min(8, Math.max(0, adults + children)), [adults, children])
+  function AdultsChildrenPicker({ adults, children, onChange, maxTotal = 8 }: { adults: number; children: number; onChange: (a:number, c:number)=>void; maxTotal?: number }) {
+    const adultMax = Math.max(0, maxTotal - children)
+    const childMax = Math.max(0, maxTotal - adults)
+    const adultOptions = Array.from({ length: adultMax + 1 }, (_, i) => i)
+    const childOptions = Array.from({ length: childMax + 1 }, (_, i) => i)
+    return (
+      <div className="space-y-3">
+        <div>
+          <div className="mb-1 text-sm text-gray-700">成人</div>
+          <div className="grid grid-cols-6 gap-2">
+            {adultOptions.map(n => (
+              <button key={n} type="button" onClick={() => onChange(n, children)} className={`px-3 py-2 rounded-md text-sm border ${n===adults ? 'bg-indigo-600 text-white border-indigo-600' : 'hover:bg-gray-50'}`}>{n}</button>
+            ))}
+          </div>
+        </div>
+        <div>
+          <div className="mb-1 text-sm text-gray-700">孩童</div>
+          <div className="grid grid-cols-6 gap-2">
+            {childOptions.map(n => (
+              <button key={n} type="button" onClick={() => onChange(adults, n)} className={`px-3 py-2 rounded-md text-sm border ${n===children ? 'bg-indigo-600 text-white border-indigo-600' : 'hover:bg-gray-50'}`}>{n}</button>
+            ))}
+          </div>
+        </div>
+        <div className="text-xs text-gray-600">合計：{adults + children} 位（最多 8 位）</div>
+      </div>
+    )
+  }
+
+  const canSubmit = date && time && name.trim() && phone.trim() && totalParty > 0 && totalParty <= 8 && tableAvailability?.hasAvailable
 
   // 依時間字串判斷區段
   // 取消 period 分類
 
   // 取得推薦/可用時段（只需要日期與人數）
   async function getRecommendations() {
-    if (!date || party <= 0) {
+    if (!date || totalParty <= 0 || totalParty > 8) {
       setRecommendations(null)
       return
     }
     
     try {
       setRecLoading(true)
-      const res = await fetch(`/api/recommendations?date=${encodeURIComponent(date)}&partySize=${party}&preferredTime=${encodeURIComponent(time)}`)
+  const res = await fetch(`/api/recommendations?date=${encodeURIComponent(date)}&partySize=${totalParty}&preferredTime=${encodeURIComponent(time)}`)
       const json = await res.json()
       
       if (res.ok) {
@@ -72,7 +104,7 @@ export default function BookPage() {
 
   // 檢查桌位可用性
   async function checkTableAvailability() {
-    if (!date || !time || party <= 0) {
+    if (!date || !time || totalParty <= 0 || totalParty > 8) {
       setTableAvailability(null)
       return
     }
@@ -80,17 +112,19 @@ export default function BookPage() {
     setCheckingTables(true)
     try {
       const datetime = `${date}T${time}:00`
-      const res = await fetch(`/api/tables?datetime=${encodeURIComponent(datetime)}&partySize=${party}`)
+  const res = await fetch(`/api/tables?datetime=${encodeURIComponent(datetime)}&partySize=${totalParty}`)
       const json = await res.json()
       
       if (res.ok) {
         setTableAvailability(json)
+        setSelectedTableIds([])
       } else {
         setTableAvailability({
           hasAvailable: false,
           availableTables: [],
           message: json.error || '檢查桌位失敗'
         })
+        setSelectedTableIds([])
       }
     } catch (e) {
       setTableAvailability({
@@ -98,6 +132,7 @@ export default function BookPage() {
         availableTables: [],
         message: '系統錯誤，請稍後再試'
       })
+      setSelectedTableIds([])
     } finally {
       setCheckingTables(false)
     }
@@ -109,17 +144,17 @@ export default function BookPage() {
       getRecommendations()
     }, 400)
     return () => clearTimeout(timeoutId)
-  }, [date, party])
+  }, [date, totalParty])
 
   // 有選擇時段並進入細節步驟時，檢查桌位
   useEffect(() => {
     if (step !== 'details') return
-    if (!date || !time || party <= 0) return
+    if (!date || !time || totalParty <= 0 || totalParty > 8) return
     const timeoutId = setTimeout(() => {
       checkTableAvailability()
     }, 300)
     return () => clearTimeout(timeoutId)
-  }, [step, date, time, party])
+  }, [step, date, time, totalParty])
 
   useEffect(() => {
     async function load() {
@@ -141,31 +176,37 @@ export default function BookPage() {
     setSuccessData(null)
     
     try {
-      if (!date) throw new Error('請選擇日期')
+  if (!date) throw new Error('請選擇日期')
       if (!name.trim()) throw new Error('請輸入姓名')
       if (!phone.trim()) throw new Error('請輸入電話')
-      if (!tableAvailability?.hasAvailable) throw new Error('該時段暫無可用桌位，請選擇其他時間')
+  if (totalParty < 1 || totalParty > 8) throw new Error('最多可接待 8 位，請調整人數')
+  if (!tableAvailability?.hasAvailable) throw new Error('該時段暫無可用桌位，請選擇其他時間')
       
       console.log('Submitting reservation:', { 
         customer_name: name, 
         customer_phone: phone, 
         customer_email: email || null,
-        party_size: party, 
+  party_size: totalParty, 
         reservation_date: date, 
         reservation_time: time,
+  adult_count: adults,
+  child_count: children,
         special_requests: specialRequests || null
       })
       
-      const res = await fetch('/api/reservations', {
+  const res = await fetch('/api/reservations', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           customer_name: name,
           customer_phone: phone,
           customer_email: email || null,
-          party_size: party,
+      party_size: totalParty,
           reservation_date: date,
           reservation_time: time,
+      adult_count: adults,
+      child_count: children,
+      preferred_table_ids: selectedTableIds,
           special_requests: specialRequests || null
         })
       })
@@ -184,13 +225,14 @@ export default function BookPage() {
         throw new Error(json.error || json.message || '建立預約失敗')
       }
       
-      setOk(true)
+  setOk(true)
       setSuccessData({
         assignedTable: json.assignedTable,
         message: json.message
       })
-      setName(''); setPhone(''); setEmail(''); setParty(2); setTime('19:00'); setDate(''); setSpecialRequests('')
-      setTableAvailability(null)
+  setName(''); setPhone(''); setEmail(''); setAdults(2); setChildren(0); setTime('19:00'); setDate(''); setSpecialRequests('')
+  setTableAvailability(null)
+  setSelectedTableIds([])
     } catch (e) {
       console.error('Submit error:', e)
       const errorMessage = (e as Error).message
@@ -236,12 +278,12 @@ export default function BookPage() {
               className="w-full"
             />
 
-            <label className="mt-4 mb-1 block text-sm text-gray-700">人數</label>
-            <div className="inline-flex items-center rounded-md border">
-              <button type="button" onClick={() => setParty(Math.max(1, party - 1))} className="h-10 w-10 select-none text-lg leading-none hover:bg-gray-50" aria-label="減少人數">−</button>
-              <input type="number" min={1} className="w-16 border-x px-2 text-center text-sm focus:outline-none" value={party} onChange={e => setParty(Math.max(1, Number(e.target.value) || 1))} />
-              <button type="button" onClick={() => setParty(Math.min(20, party + 1))} className="h-10 w-10 select-none text-lg leading-none hover:bg-gray-50" aria-label="增加人數">+</button>
-            </div>
+            <label className="mt-4 mb-1 block text-sm text-gray-700">人數（總數上限 8 位）</label>
+            <AdultsChildrenPicker
+              adults={adults}
+              children={children}
+              onChange={(a,c)=>{ setAdults(a); setChildren(c); setStep('search') }}
+            />
 
             {/* 可預約時段清單（依 Supabase business_hours 驅動） */}
             <div className="mt-4">
@@ -278,7 +320,10 @@ export default function BookPage() {
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-base font-semibold text-gray-900">{step==='details' ? '確認與聯絡資料' : '等待選擇時段'}</h2>
               {step==='details' && (
-                <button className="text-xs text-indigo-600 hover:underline" onClick={() => setStep('search')}>變更時段</button>
+                <div className="flex items-center gap-3">
+                  <button className="text-xs text-indigo-600 hover:underline" onClick={() => setStep('search')}>變更人數</button>
+                  <button className="text-xs text-indigo-600 hover:underline" onClick={() => setStep('search')}>變更時段</button>
+                </div>
               )}
             </div>
 
@@ -288,7 +333,7 @@ export default function BookPage() {
               </div>
             ) : (
               <>
-            <div className="mb-3 text-sm text-gray-700">已選擇：{date} {time} · {party} 位</div>
+            <div className="mb-3 text-sm text-gray-700">已選擇：{date} {time} · {totalParty} 位（成人 {adults}、孩童 {children}）</div>
             <h3 className="mb-2 text-sm font-medium text-gray-900">聯絡與人數</h3>
 
             <label className="mb-1 block text-sm text-gray-700">姓名</label>
@@ -317,35 +362,11 @@ export default function BookPage() {
               onChange={e => setEmail(e.target.value)}
             />
 
-            <label className="mt-4 mb-1 block text-sm text-gray-700">人數</label>
-            <div className="inline-flex items-center rounded-md border">
-              <button
-                type="button"
-                onClick={() => setParty(Math.max(1, party - 1))}
-                className="h-10 w-10 select-none text-lg leading-none hover:bg-gray-50"
-                aria-label="減少人數"
-              >
-                −
-              </button>
-              <input
-                type="number"
-                min={1}
-                className="w-16 border-x px-2 text-center text-sm focus:outline-none"
-                value={party}
-                onChange={e => setParty(Math.max(1, Number(e.target.value) || 1))}
-              />
-              <button
-                type="button"
-                onClick={() => setParty(Math.min(20, party + 1))}
-                className="h-10 w-10 select-none text-lg leading-none hover:bg-gray-50"
-                aria-label="增加人數"
-              >
-                +
-              </button>
-            </div>
+            {/* 人數選擇整合到左側，只在此顯示摘要 */}
+            <div className="mt-2 text-sm text-gray-700">合計：{totalParty} 位（成人 {adults}、孩童 {children}）</div>
 
             {/* 桌位可用性顯示 */}
-            {(date && time && party > 0) && (
+            {(date && time && totalParty > 0 && totalParty <= 8) && (
               <div className="mt-4 space-y-3">
                 <div className="rounded-md border p-3">
                   <div className="flex items-center gap-2 mb-2">
@@ -361,10 +382,64 @@ export default function BookPage() {
                         <div className={`w-2 h-2 rounded-full ${tableAvailability.hasAvailable ? 'bg-green-500' : 'bg-red-500'}`}></div>
                         {tableAvailability.message}
                       </div>
-                      
+
+                      {/* 小卡選位區域 */}
                       {tableAvailability.hasAvailable && tableAvailability.availableTables.length > 0 && (
-                        <div className="mt-2 text-xs text-gray-600">
-                          建議桌位：{tableAvailability.availableTables[0].name}（{tableAvailability.availableTables[0].type}）
+                        <div className="mt-3">
+                          {(() => {
+                            const ats = tableAvailability.availableTables || []
+                            const isCombo = (totalParty >= 7)
+                              && ats.length === 2
+                              && ats.every((t:any) => (t.capacity||0) < totalParty)
+                              && ((ats[0].capacity||0) + (ats[1].capacity||0) >= totalParty)
+
+                            if (isCombo) {
+                              const a = ats[0], b = ats[1]
+                              const selected = selectedTableIds.length === 2 && selectedTableIds.includes(String(a.id)) && selectedTableIds.includes(String(b.id))
+                              return (
+                                <div>
+                                  <div className="text-xs text-gray-600 mb-2">請選擇座位：</div>
+                                  <button
+                                    type="button"
+                                    onClick={() => setSelectedTableIds(selected ? [] : [String(a.id), String(b.id)])}
+                                    className={`w-full text-left border rounded-md p-3 transition ${selected ? 'border-indigo-600 ring-2 ring-indigo-200 bg-indigo-50' : 'hover:bg-gray-50'}`}
+                                  >
+                                    <div className="text-sm font-medium text-gray-900">6+2 雙桌：{a.name}（{a.type}） + {b.name}（{b.type}）</div>
+                                    <div className="text-xs text-gray-600 mt-0.5">適合 {totalParty} 位，優先以組合用桌降低浪費</div>
+                                  </button>
+                                </div>
+                              )
+                            }
+
+                            // 單桌情境：只開放最貼近的人數桌（不足時才開放上一級）
+                            const candidates = ats.filter((t:any) => (t.capacity||0) >= totalParty)
+                            const minCap = candidates.reduce((acc:number, t:any) => Math.min(acc, t.capacity||0), Infinity)
+                            const show = candidates.filter((t:any) => (t.capacity||0) === minCap)
+                            return (
+                              <div>
+                                <div className="text-xs text-gray-600 mb-2">請選擇座位：</div>
+                                <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                                  {show.map((t:any) => {
+                                    const sel = selectedTableIds.length === 1 && selectedTableIds[0] === String(t.id)
+                                    return (
+                                      <button
+                                        key={t.id}
+                                        type="button"
+                                        onClick={() => setSelectedTableIds(sel ? [] : [String(t.id)])}
+                                        className={`border rounded-md p-3 text-left transition ${sel ? 'border-indigo-600 ring-2 ring-indigo-200 bg-indigo-50' : 'hover:bg-gray-50'}`}
+                                      >
+                                        <div className="text-sm font-medium text-gray-900">{t.name}</div>
+                                        <div className="text-xs text-gray-600">{t.type}</div>
+                                      </button>
+                                    )
+                                  })}
+                                </div>
+                                {candidates.length === 0 && (
+                                  <div className="text-xs text-gray-600 mt-2">同級座位不足，將自動開放下一級人數桌。</div>
+                                )}
+                              </div>
+                            )
+                          })()}
                         </div>
                       )}
                     </div>

@@ -1,0 +1,17 @@
+[
+  {
+    "id": "4d5734ff-7016-40aa-a1d7-74e1babce0dc",
+    "category_id": 1,
+    "name": "經典牛排",
+    "description": "Prime 等級牛排",
+    "price": 680,
+    "image_url": null,
+    "is_active": true,
+    "popularity_score": 0,
+    "tags": [
+      "featured"
+    ],
+    "created_at": "2025-08-11T09:16:04.538516+00:00",
+    "updated_at": "2025-08-11T09:16:04.538516+00:00"
+  }
+]

@@ -1,0 +1,92 @@
+-- 原始 SUPABASE.SQL 中的所有表格清單
+-- 與 SUPABASE_OPTIMIZED.SQL 的對比分析
+
+/*
+=== 原始檔案中的所有表格 (按字母順序排列) ===
+
+1. achievements ✅ (遺漏 - 需要添加)
+2. ai_analysis_logs ✅ (遺漏 - 需要添加)
+3. ai_evolution_log ✅ (部分整合到 ai_interactions)
+4. ai_interactions ✅ (已包含)
+5. ai_performance_metrics ✅ (遺漏 - 需要添加)
+6. ai_pets ✅ (已包含)
+7. ai_recommendations ✅ (遺漏 - 需要添加)
+8. analytics_events ✅ (已包含)
+9. audit_logs ✅ (已包含)
+10. categories ✅ (已包含)
+11. combo_products ❌ (已整合到 products)
+12. combo_selection_options ✅ (已包含)
+13. combo_selection_rules ✅ (已包含)
+14. customer_coupons ❌ (已整合到 user_coupons)
+15. customer_favorites ❌ (已整合到 user_favorites)
+16. customer_orders ❌ (已整合到 orders)
+17. customer_points ❌ (已整合到 user_points)
+18. customer_points_transactions ❌ (已整合到 user_points_transactions)
+19. customer_preferences ❌ (已整合到 user_preferences)
+20. customer_reservations ❌ (已整合到 reservations)
+21. customer_reviews ❌ (已整合到 user_reviews)
+22. customer_users ❌ (已整合到 users)
+23. error_logs ✅ (已包含)
+24. favorites ❌ (已整合到 user_favorites)
+25. loyalty_points ❌ (已整合到 user_points)
+26. loyalty_transactions ❌ (已整合到 user_points_transactions)
+27. marquees ✅ (已包含)
+28. menu_categories ❌ (已整合到 categories)
+29. menu_items ❌ (已整合到 products)
+30. notifications ✅ (已包含)
+31. order_combo_selections ✅ (已包含)
+32. order_items ✅ (已包含)
+33. orders ✅ (已包含，但已整合擴展)
+34. payments ✅ (已包含)
+35. pet_interactions ✅ (遺漏 - 需要添加，或整合到 ai_interactions)
+36. product_modifiers ✅ (已包含)
+37. product_variants ✅ (已包含)
+38. products ✅ (已包含，但已整合擴展)
+39. profiles ❌ (已整合到 users)
+40. purchase_order_items ✅ (遺漏 - 供應商管理)
+41. purchase_orders ✅ (遺漏 - 供應商管理)
+42. raw_materials ✅ (遺漏 - 庫存管理)
+43. receipts ✅ (已包含)
+44. reservations ✅ (已包含，但已整合擴展)
+45. restaurant_closures ✅ (遺漏 - 需要添加)
+46. restaurant_holidays ✅ (已包含)
+47. restaurant_settings ✅ (遺漏 - 已整合到 restaurants 的 settings 欄位)
+48. restaurants ✅ (已包含)
+49. reviews ❌ (已整合到 user_reviews)
+50. stock_movements ✅ (遺漏 - 庫存管理)
+51. suppliers ✅ (遺漏 - 供應商管理)
+52. table_reservations ❌ (已整合到 reservations)
+53. table_sessions ✅ (已包含)
+54. tables ✅ (已包含)
+55. takeaway_sequences ✅ (遺漏 - 外帶序號管理)
+56. user_achievements ✅ (遺漏 - 需要添加)
+57. user_sessions ✅ (已包含)
+58. users ✅ (已包含，但已整合擴展)
+59. virtual_pets ✅ (遺漏 - 虛擬寵物系統，不同於 ai_pets)
+60. waitlist ✅ (遺漏 - 候位系統)
+
+=== 分析結果 ===
+
+已整合的表格 (15個):
+- customer_* 系列 → 統一到 user_* 系列
+- menu_* 系列 → 統一到 products/categories
+- loyalty_* 系列 → 統一到 user_points*
+- combo_products → 整合到 products
+- profiles → 整合到 users
+
+完全遺漏的重要表格 (12個):
+1. achievements - 成就系統
+2. ai_analysis_logs - AI 分析日誌
+3. ai_performance_metrics - AI 效能指標
+4. ai_recommendations - AI 推薦
+5. purchase_orders, purchase_order_items - 採購管理
+6. raw_materials - 原料管理
+7. stock_movements - 庫存異動
+8. suppliers - 供應商管理
+9. restaurant_closures - 餐廳休假
+10. takeaway_sequences - 外帶序號
+11. user_achievements - 用戶成就
+12. virtual_pets - 虛擬寵物 (不同於 ai_pets)
+13. waitlist - 候位系統
+
+*/

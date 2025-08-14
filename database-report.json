@@ -1,0 +1,1042 @@
+{
+  "timestamp": "2025-08-14T07:37:23.607Z",
+  "totalTables": 59,
+  "tables": [
+    {
+      "name": "achievements",
+      "rowCount": 6,
+      "hasData": true,
+      "sampleData": [
+        {
+          "id": "e49c231d-1a73-476a-8188-2d96ac95506a",
+          "code": "first_chat",
+          "name": "初次相遇",
+          "description": "與你的AI助手進行第一次對話",
+          "category": "social",
+          "requirements": {
+            "interactions": 1
+          },
+          "reward_exp": 50,
+          "reward_items": [],
+          "rarity": "common",
+          "icon": null,
+          "is_active": true,
+          "is_hidden": false,
+          "created_at": "2025-08-07T15:13:01.192173+00:00"
+        }
+      ]
+    },
+    {
+      "name": "ai_analysis_logs",
+      "rowCount": 0,
+      "hasData": false,
+      "sampleData": []
+    },
+    {
+      "name": "ai_evolution_log",
+      "rowCount": 1,
+      "hasData": true,
+      "sampleData": [
+        {
+          "id": "7d21cd04-022a-4190-9441-9c153ecd8083",
+          "ai_pet_id": "68030c90-0c3c-4644-8b90-4d1f06b76a10",
+          "evolution_type": "birth",
+          "trigger_event": "user_registration",
+          "changes_made": "{\"action\":\"AI寵物誕生\",\"personality\":{\"name\":\"小清\",\"friendliness\":70,\"formality\":90,\"proactivity\":40,\"humor\":20,\"avatar\":\"healthy_ai\"},\"birth_date\":\"2025-08-07T15:50:43.797Z\"}",
+          "previous_state": null,
+          "new_state": "{\"id\":\"68030c90-0c3c-4644-8b90-4d1f06b76a10\",\"user_id\":\"7e4a3ad0-b62a-4d7b-b03d-f619178a6946\",\"name\":\"小清\",\"avatar\":\"healthy_ai\",\"birth_date\":\"2025-08-07T15:50:43.218714+00:00\",\"level\":1,\"experience_points\":0,\"next_level_exp\":100,\"friendliness\":70,\"formality\":90,\"proactivity\":40,\"humor\":20,\"memory_focus\":\"taste\",\"learning_speed\":1,\"adaptation_rate\":1,\"total_conversations\":0,\"successful_recommendations\":0,\"customer_satisfaction_avg\":5,\"mood\":\"excited\",\"energy_level\":100,\"special_abilities\":\"[\\\"新手推薦\\\"]\",\"personality_quirks\":\"[\\\"我是小清，很高興認識你！\\\"]\",\"evolution_history\":[],\"milestones_achieved\":[],\"created_at\":\"2025-08-07T15:50:43.218714+00:00\",\"updated_at\":\"2025-08-07T15:50:43.218714+00:00\",\"last_interaction_at\":\"2025-08-07T15:50:43.218714+00:00\"}",
+          "interaction_count": null,
+          "user_satisfaction": null,
+          "learning_data": null,
+          "created_at": "2025-08-07T15:50:43.399352+00:00"
+        }
+      ]
+    },
+    {
+      "name": "ai_interactions",
+      "rowCount": 0,
+      "hasData": false,
+      "sampleData": []
+    },
+    {
+      "name": "ai_performance_metrics",
+      "rowCount": 0,
+      "hasData": false,
+      "sampleData": []
+    },
+    {
+      "name": "ai_pets",
+      "rowCount": 1,
+      "hasData": true,
+      "sampleData": [
+        {
+          "id": "68030c90-0c3c-4644-8b90-4d1f06b76a10",
+          "user_id": "7e4a3ad0-b62a-4d7b-b03d-f619178a6946",
+          "name": "小清",
+          "avatar": "healthy_ai",
+          "birth_date": "2025-08-07T15:50:43.218714+00:00",
+          "level": 1,
+          "experience_points": 0,
+          "next_level_exp": 100,
+          "friendliness": 70,
+          "formality": 90,
+          "proactivity": 40,
+          "humor": 20,
+          "memory_focus": "taste",
+          "learning_speed": 1,
+          "adaptation_rate": 1,
+          "total_conversations": 0,
+          "successful_recommendations": 0,
+          "customer_satisfaction_avg": 5,
+          "mood": "excited",
+          "energy_level": 100,
+          "special_abilities": "[\"新手推薦\"]",
+          "personality_quirks": "[\"我是小清，很高興認識你！\"]",
+          "evolution_history": [],
+          "milestones_achieved": [],
+          "created_at": "2025-08-07T15:50:43.218714+00:00",
+          "updated_at": "2025-08-07T15:50:43.218714+00:00",
+          "last_interaction_at": "2025-08-07T15:50:43.218714+00:00"
+        }
+      ]
+    },
+    {
+      "name": "ai_recommendations",
+      "rowCount": 0,
+      "hasData": false,
+      "sampleData": []
+    },
+    {
+      "name": "analytics_events",
+      "rowCount": 0,
+      "hasData": false,
+      "sampleData": []
+    },
+    {
+      "name": "audit_logs",
+      "rowCount": 0,
+      "hasData": false,
+      "sampleData": []
+    },
+    {
+      "name": "categories",
+      "rowCount": 9,
+      "hasData": true,
+      "sampleData": [
+        {
+          "id": "22222222-2222-2222-2222-222222222222",
+          "restaurant_id": "11111111-1111-1111-1111-111111111111",
+          "name": "飲品",
+          "description": "各式飲品",
+          "sort_order": 2,
+          "color": "#10B981",
+          "icon": "🥤",
+          "image_url": null,
+          "parent_id": null,
+          "level": 1,
+          "path": null,
+          "is_active": true,
+          "created_at": "2025-08-05T07:37:01.09837+00:00",
+          "updated_at": "2025-08-05T07:37:01.09837+00:00",
+          "ai_visibility_score": 1,
+          "ai_popularity_rank": null,
+          "metadata": null
+        }
+      ]
+    },
+    {
+      "name": "combo_products",
+      "rowCount": 9,
+      "hasData": true,
+      "sampleData": [
+        {
+          "id": "3b5857b2-a782-48a0-97d6-95f85f158a4f",
+          "restaurant_id": "11111111-1111-1111-1111-111111111111",
+          "category_id": "11111111-2222-3333-4444-555555555552",
+          "name": "泰式經典套餐",
+          "description": "包含主餐、沙拉和甜點的完整套餐，體驗正宗泰式風味",
+          "price": 330,
+          "cost": 0,
+          "combo_type": "selectable",
+          "image_url": null,
+          "sort_order": 1,
+          "is_available": true,
+          "is_active": true,
+          "preparation_time": 25,
+          "availability_start": null,
+          "availability_end": null,
+          "available_days": null,
+          "min_items": 1,
+          "max_items": null,
+          "discount_type": "fixed",
+          "discount_value": 0,
+          "ai_popularity_score": 0.5,
+          "ai_recommended": false,
+          "created_at": "2025-08-06T05:08:39.711867+00:00",
+          "updated_at": "2025-08-06T05:10:51.577058+00:00",
+          "metadata": null
+        }
+      ]
+    },
+    {
+      "name": "combo_selection_options",
+      "rowCount": 62,
+      "hasData": true,
+      "sampleData": [
+        {
+          "id": "7c2c96aa-1896-47be-a9ec-c6c951088001",
+          "rule_id": "38db4f21-6069-4c26-ac25-8659e5682ed7",
+          "product_id": "95942080-0f97-47ed-807c-9a403d3cfaa2",
+          "additional_price": 0,
+          "is_default": true,
+          "sort_order": 1,
+          "created_at": "2025-08-06T05:08:40.153282+00:00"
+        }
+      ]
+    },
+    {
+      "name": "combo_selection_rules",
+      "rowCount": 25,
+      "hasData": true,
+      "sampleData": [
+        {
+          "id": "e503a405-7cf8-4f6d-aa55-06365e69f66c",
+          "combo_id": "5e751d6b-8356-4873-abae-d3610aabbe31",
+          "category_id": null,
+          "selection_name": "主餐選擇",
+          "description": "請選擇一道主餐",
+          "min_selections": 1,
+          "max_selections": 1,
+          "is_required": true,
+          "display_order": 1,
+          "created_at": "2025-08-06T05:08:06.863918+00:00",
+          "updated_at": "2025-08-06T05:08:06.863918+00:00"
+        }
+      ]
+    },
+    {
+      "name": "customer_coupons",
+      "rowCount": 0,
+      "hasData": false,
+      "sampleData": []
+    },
+    {
+      "name": "customer_favorites",
+      "rowCount": 0,
+      "hasData": false,
+      "sampleData": []
+    },
+    {
+      "name": "customer_orders",
+      "rowCount": 0,
+      "hasData": false,
+      "sampleData": []
+    },
+    {
+      "name": "customer_points",
+      "rowCount": 0,
+      "hasData": false,
+      "sampleData": []
+    },
+    {
+      "name": "customer_points_transactions",
+      "rowCount": 0,
+      "hasData": false,
+      "sampleData": []
+    },
+    {
+      "name": "customer_preferences",
+      "rowCount": 1,
+      "hasData": true,
+      "sampleData": [
+        {
+          "id": "1aecae89-53b0-4d32-a24c-ea2cbd7e2b85",
+          "user_id": "7e4a3ad0-b62a-4d7b-b03d-f619178a6946",
+          "spice_tolerance": 3,
+          "sweet_preference": 3,
+          "sour_preference": 3,
+          "salty_preference": 3,
+          "dietary_restrictions": [],
+          "allergens": [],
+          "avoided_ingredients": [],
+          "preferred_cuisines": [],
+          "favorite_dishes": [],
+          "disliked_dishes": [],
+          "ordering_frequency": "monthly",
+          "avg_order_value": 0,
+          "preferred_meal_times": [],
+          "party_size_usual": 2,
+          "decision_speed": "moderate",
+          "price_sensitivity": "moderate",
+          "adventurous_level": 5,
+          "confidence_scores": {},
+          "created_at": "2025-08-07T15:50:43.582169+00:00",
+          "updated_at": "2025-08-07T15:50:43.582169+00:00"
+        }
+      ]
+    },
+    {
+      "name": "customer_reservations",
+      "rowCount": 0,
+      "hasData": false,
+      "sampleData": []
+    },
+    {
+      "name": "customer_reviews",
+      "rowCount": 0,
+      "hasData": false,
+      "sampleData": []
+    },
+    {
+      "name": "customer_users",
+      "rowCount": 0,
+      "hasData": false,
+      "sampleData": []
+    },
+    {
+      "name": "error_logs",
+      "rowCount": 0,
+      "hasData": false,
+      "sampleData": []
+    },
+    {
+      "name": "favorites",
+      "rowCount": 0,
+      "hasData": false,
+      "sampleData": []
+    },
+    {
+      "name": "loyalty_points",
+      "rowCount": 0,
+      "hasData": false,
+      "sampleData": []
+    },
+    {
+      "name": "loyalty_transactions",
+      "rowCount": 0,
+      "hasData": false,
+      "sampleData": []
+    },
+    {
+      "name": "marquees",
+      "rowCount": 1,
+      "hasData": true,
+      "sampleData": [
+        {
+          "id": "3d037f62-421f-4a77-8603-3f4dfe71c280",
+          "message": "APP測試中...本週休假星期一與星期四",
+          "href": "/book",
+          "priority": 20,
+          "is_active": true,
+          "starts_at": "2025-08-13T08:09:41.226435+00:00",
+          "ends_at": null,
+          "created_at": "2025-08-13T08:09:41.226435+00:00",
+          "updated_at": "2025-08-13T08:14:15.701823+00:00"
+        }
+      ]
+    },
+    {
+      "name": "menu_categories",
+      "rowCount": 1,
+      "hasData": true,
+      "sampleData": [
+        {
+          "id": 1,
+          "name": "招牌推薦",
+          "display_order": 1,
+          "is_active": true
+        }
+      ]
+    },
+    {
+      "name": "menu_items",
+      "rowCount": 1,
+      "hasData": true,
+      "sampleData": [
+        {
+          "id": "4d5734ff-7016-40aa-a1d7-74e1babce0dc",
+          "category_id": 1,
+          "name": "經典牛排",
+          "description": "Prime 等級牛排",
+          "price": 680,
+          "image_url": null,
+          "is_active": true,
+          "popularity_score": 0,
+          "tags": [
+            "featured"
+          ],
+          "created_at": "2025-08-11T09:16:04.538516+00:00",
+          "updated_at": "2025-08-11T09:16:04.538516+00:00"
+        }
+      ]
+    },
+    {
+      "name": "notifications",
+      "rowCount": 0,
+      "hasData": false,
+      "sampleData": []
+    },
+    {
+      "name": "order_combo_selections",
+      "rowCount": 276,
+      "hasData": true,
+      "sampleData": [
+        {
+          "id": "fc8a09cf-967a-4128-bb9e-312bbd9d1e1b",
+          "order_item_id": "e34d6eaa-e11f-420d-ae30-41f40ec93195",
+          "rule_id": "94b9cab4-8d24-4f17-87bb-bfc1faec9aea",
+          "selected_product_id": "95942080-0f97-47ed-807c-9a403d3cfaa2",
+          "quantity": 1,
+          "additional_price": 0,
+          "created_at": "2025-08-06T09:47:18.615+00:00"
+        }
+      ]
+    },
+    {
+      "name": "order_items",
+      "rowCount": 402,
+      "hasData": true,
+      "sampleData": [
+        {
+          "id": "11111111-1111-1111-1111-111111111301",
+          "order_id": "11111111-1111-1111-1111-111111111201",
+          "product_id": "a1111111-1111-1111-1111-111111111111",
+          "combo_id": null,
+          "item_type": "product",
+          "product_name": "招牌牛肉麵",
+          "product_sku": null,
+          "variant_name": null,
+          "quantity": 1,
+          "unit_price": 180,
+          "total_price": 180,
+          "cost_price": 0,
+          "status": "preparing",
+          "ordered_at": "2025-08-05T07:37:01.837179+00:00",
+          "preparation_started_at": null,
+          "ready_at": null,
+          "served_at": null,
+          "estimated_prep_time": null,
+          "actual_prep_time": null,
+          "special_instructions": null,
+          "modifiers": null,
+          "kitchen_station": null,
+          "priority_level": 3,
+          "quality_checked": false,
+          "created_at": "2025-08-05T07:37:01.837179+00:00",
+          "updated_at": "2025-08-05T07:37:01.837179+00:00"
+        }
+      ]
+    },
+    {
+      "name": "orders",
+      "rowCount": 143,
+      "hasData": true,
+      "sampleData": [
+        {
+          "id": "49d9e50f-6063-4f23-b770-3f648d9ff9fc",
+          "restaurant_id": "11111111-1111-1111-1111-111111111111",
+          "table_id": null,
+          "session_id": null,
+          "order_number": "1-847-A2",
+          "order_type": "dine_in",
+          "customer_name": "",
+          "customer_phone": "",
+          "customer_email": null,
+          "table_number": 1,
+          "party_size": null,
+          "subtotal": 180,
+          "discount_amount": 0,
+          "tax_amount": 0,
+          "service_charge": 18,
+          "total_amount": 198,
+          "status": "completed",
+          "payment_status": "paid",
+          "ordered_at": "2025-08-05T18:42:24.025545+00:00",
+          "confirmed_at": null,
+          "preparation_started_at": null,
+          "ready_at": null,
+          "served_at": null,
+          "completed_at": "2025-08-05T19:29:26.716+00:00",
+          "estimated_ready_time": null,
+          "estimated_prep_time": null,
+          "actual_prep_time": null,
+          "ai_optimized": false,
+          "ai_estimated_prep_time": null,
+          "ai_recommendations": null,
+          "ai_efficiency_score": null,
+          "notes": null,
+          "special_instructions": null,
+          "source": "mobile_pos",
+          "created_by": null,
+          "updated_by": null,
+          "created_at": "2025-08-05T18:42:23.036+00:00",
+          "updated_at": "2025-08-05T19:29:27.812912+00:00",
+          "metadata": null
+        }
+      ]
+    },
+    {
+      "name": "payments",
+      "rowCount": 117,
+      "hasData": true,
+      "sampleData": [
+        {
+          "id": "e5246cb1-100a-4fd4-820d-7a46ba8b5b5f",
+          "order_id": "e0c1a95c-a74c-4ff9-b811-abe7eace2ed5",
+          "payment_method": "cash",
+          "payment_provider": null,
+          "amount": 943,
+          "received_amount": 1000,
+          "change_amount": 180,
+          "tip_amount": 0,
+          "transaction_id": null,
+          "reference_number": null,
+          "authorization_code": null,
+          "card_last_four": null,
+          "card_type": null,
+          "card_brand": null,
+          "mobile_provider": null,
+          "mobile_account": null,
+          "status": "completed",
+          "processed_at": "2025-08-05T13:31:26.065+00:00",
+          "confirmed_at": "2025-08-05T13:31:26.065+00:00",
+          "refund_amount": 0,
+          "refund_reason": null,
+          "refunded_at": null,
+          "processed_by": null,
+          "terminal_id": null,
+          "created_at": "2025-08-05T13:31:27.803695+00:00",
+          "updated_at": "2025-08-05T13:31:27.803695+00:00",
+          "metadata": null
+        }
+      ]
+    },
+    {
+      "name": "pet_interactions",
+      "rowCount": 8,
+      "hasData": true,
+      "sampleData": [
+        {
+          "id": "7ccb60ba-f172-4e3b-8580-035495dabc79",
+          "pet_id": "c1a86507-4d81-4dc3-9b15-5e799adf3c90",
+          "interaction_type": "feed",
+          "experience_gained": 10,
+          "result": "阿狸吃得很開心！肚子不餓了～ 🍽️",
+          "created_at": "2025-08-10T15:47:07.457228+00:00"
+        }
+      ]
+    },
+    {
+      "name": "product_modifiers",
+      "rowCount": 0,
+      "hasData": false,
+      "sampleData": []
+    },
+    {
+      "name": "product_variants",
+      "rowCount": 0,
+      "hasData": false,
+      "sampleData": []
+    },
+    {
+      "name": "products",
+      "rowCount": 62,
+      "hasData": true,
+      "sampleData": [
+        {
+          "id": "95942080-0f97-47ed-807c-9a403d3cfaa2",
+          "restaurant_id": "11111111-1111-1111-1111-111111111111",
+          "category_id": "11111111-1111-1111-1111-111111111111",
+          "name": "打拋豬飯",
+          "description": "經典打拋豬搭配泰式炸蛋與香米，鹹香夠味。",
+          "sku": "MAIN008",
+          "barcode": null,
+          "price": 220,
+          "cost": 24,
+          "image_url": null,
+          "images": null,
+          "sort_order": 3,
+          "is_available": true,
+          "is_active": true,
+          "track_inventory": false,
+          "current_stock": 0,
+          "min_stock": 0,
+          "max_stock": 0,
+          "unit": "item",
+          "prep_time_minutes": 2,
+          "cook_time_minutes": 5,
+          "total_time_minutes": 10,
+          "calories": null,
+          "nutrition_info": null,
+          "allergens": null,
+          "dietary_tags": null,
+          "ai_popularity_score": null,
+          "ai_recommended": false,
+          "ai_demand_forecast": null,
+          "total_sold": null,
+          "revenue_generated": null,
+          "last_sold_at": null,
+          "created_at": null,
+          "updated_at": "2025-08-06T04:43:01.44235+00:00",
+          "metadata": null,
+          "custom_fields": null
+        }
+      ]
+    },
+    {
+      "name": "profiles",
+      "rowCount": 0,
+      "hasData": false,
+      "sampleData": []
+    },
+    {
+      "name": "purchase_order_items",
+      "rowCount": 0,
+      "hasData": false,
+      "sampleData": []
+    },
+    {
+      "name": "purchase_orders",
+      "rowCount": 0,
+      "hasData": false,
+      "sampleData": []
+    },
+    {
+      "name": "raw_materials",
+      "rowCount": 3,
+      "hasData": true,
+      "sampleData": [
+        {
+          "id": "11111111-1111-1111-1111-111111112401",
+          "restaurant_id": "11111111-1111-1111-1111-111111111111",
+          "supplier_id": "11111111-1111-1111-1111-111111112301",
+          "name": "牛肉塊",
+          "category": "肉類",
+          "sku": null,
+          "barcode": null,
+          "unit": "kg",
+          "current_stock": 25.5,
+          "min_stock": 10,
+          "max_stock": 50,
+          "reorder_point": 0,
+          "cost_per_unit": 350,
+          "last_purchase_cost": null,
+          "average_cost": null,
+          "shelf_life_days": null,
+          "storage_location": null,
+          "storage_conditions": null,
+          "quality_standards": null,
+          "inspection_required": false,
+          "last_restock_date": null,
+          "last_used_date": null,
+          "total_consumed": 0,
+          "is_active": true,
+          "created_at": "2025-08-05T07:42:38.584526+00:00",
+          "updated_at": "2025-08-05T07:42:38.584526+00:00"
+        }
+      ]
+    },
+    {
+      "name": "receipts",
+      "rowCount": 0,
+      "hasData": false,
+      "sampleData": []
+    },
+    {
+      "name": "reservations",
+      "rowCount": 12,
+      "hasData": true,
+      "sampleData": [
+        {
+          "id": "738f620a-bf73-454f-b7bc-c0acec78719b",
+          "restaurant_id": "a8fff0de-a2dd-4749-a80c-08a6102de734",
+          "table_id": null,
+          "customer_name": "測試客戶",
+          "customer_phone": "0912345678",
+          "customer_email": null,
+          "party_size": 4,
+          "reservation_date": "2025-08-09",
+          "reservation_time": "18:00:00",
+          "status": "confirmed",
+          "special_requests": "靠窗座位",
+          "notes": null,
+          "created_via": "ai_chat",
+          "confidence_score": 1,
+          "created_at": "2025-08-08T04:11:22.975151+00:00",
+          "updated_at": "2025-08-08T04:11:22.975151+00:00",
+          "confirmed_at": null,
+          "seated_at": null,
+          "completed_at": null,
+          "cancelled_at": null,
+          "metadata": {}
+        }
+      ]
+    },
+    {
+      "name": "restaurant_closures",
+      "rowCount": 0,
+      "hasData": false,
+      "sampleData": []
+    },
+    {
+      "name": "restaurant_holidays",
+      "rowCount": 0,
+      "hasData": false,
+      "sampleData": []
+    },
+    {
+      "name": "restaurants",
+      "rowCount": 2,
+      "hasData": true,
+      "sampleData": [
+        {
+          "id": "a8fff0de-a2dd-4749-a80c-08a6102de734",
+          "name": "TanawatThai",
+          "address": "keelong",
+          "phone": "0971715711",
+          "email": "info@tanawat.tw",
+          "website": null,
+          "tax_rate": 0,
+          "service_charge_rate": 0,
+          "currency": "TWD",
+          "timezone": "Asia/Taipei",
+          "business_hours": {
+            "friday": {
+              "open": "14:00",
+              "close": "21:00",
+              "is_open": true
+            },
+            "monday": {
+              "open": "14:00",
+              "close": "21:00",
+              "is_open": true
+            },
+            "sunday": {
+              "open": "14:00",
+              "close": "21:00",
+              "is_open": true
+            },
+            "tuesday": {
+              "open": "14:00",
+              "close": "21:00",
+              "is_open": true
+            },
+            "saturday": {
+              "open": "14:00",
+              "close": "21:00",
+              "is_open": true
+            },
+            "thursday": {
+              "open": "14:00",
+              "close": "21:00",
+              "is_open": true
+            },
+            "wednesday": {
+              "open": "14:00",
+              "close": "21:00",
+              "is_open": true
+            }
+          },
+          "settings": {
+            "reservation_settings": {
+              "auto_confirm": true,
+              "buffer_minutes": 15,
+              "reminder_hours": [
+                24,
+                2
+              ],
+              "walk_in_enabled": true,
+              "deposit_required": false,
+              "min_advance_hours": 0,
+              "quick_registration": true,
+              "advance_booking_days": 7,
+              "max_guests_per_30min": 8,
+              "same_day_slots_limit": 50,
+              "child_chair_available": true,
+              "allow_same_day_booking": true,
+              "default_duration_minutes": 120
+            }
+          },
+          "is_active": true,
+          "created_at": "2025-07-31T12:43:28.845282+00:00",
+          "updated_at": "2025-08-08T08:59:12.906274+00:00",
+          "metadata": null,
+          "custom_fields": null,
+          "reservation_settings": {
+            "businessHours": {
+              "friday": {
+                "isOpen": true,
+                "openTime": "14:00",
+                "closeTime": "21:00"
+              },
+              "monday": {
+                "isOpen": true,
+                "openTime": "14:00",
+                "closeTime": "21:00"
+              },
+              "sunday": {
+                "isOpen": true,
+                "openTime": "14:00",
+                "closeTime": "21:00"
+              },
+              "tuesday": {
+                "isOpen": true,
+                "openTime": "14:00",
+                "closeTime": "21:00"
+              },
+              "saturday": {
+                "isOpen": true,
+                "openTime": "14:00",
+                "closeTime": "21:00"
+              },
+              "thursday": {
+                "isOpen": true,
+                "openTime": "14:00",
+                "closeTime": "21:00"
+              },
+              "wednesday": {
+                "isOpen": true,
+                "openTime": "14:00",
+                "closeTime": "21:00"
+              }
+            },
+            "autoAssignment": {
+              "enabled": true,
+              "capacityWeight": 0.5,
+              "aiPriorityWeight": 0.2,
+              "preferenceWeight": 0.3
+            },
+            "reservationSettings": {
+              "lastReservationTime": "19:30",
+              "mealDurationMinutes": 90,
+              "slotDurationMinutes": 30,
+              "maxAdvanceBookingDays": 30,
+              "minAdvanceBookingHours": 2
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "reviews",
+      "rowCount": 0,
+      "hasData": false,
+      "sampleData": []
+    },
+    {
+      "name": "stock_movements",
+      "rowCount": 0,
+      "hasData": false,
+      "sampleData": []
+    },
+    {
+      "name": "suppliers",
+      "rowCount": 2,
+      "hasData": true,
+      "sampleData": [
+        {
+          "id": "11111111-1111-1111-1111-111111112301",
+          "restaurant_id": "11111111-1111-1111-1111-111111111111",
+          "name": "新鮮食材有限公司",
+          "code": null,
+          "contact_person": "王經理",
+          "phone": "02-1234-5678",
+          "email": "wang@freshfood.com",
+          "website": null,
+          "address": "台北市中山區民生東路123號",
+          "payment_terms": "net_30",
+          "delivery_days": null,
+          "min_order_amount": 0,
+          "credit_limit": null,
+          "discount_rate": 0,
+          "quality_rating": null,
+          "delivery_rating": null,
+          "service_rating": null,
+          "is_active": true,
+          "created_at": "2025-08-05T07:42:38.420616+00:00",
+          "updated_at": "2025-08-05T07:42:38.420616+00:00"
+        }
+      ]
+    },
+    {
+      "name": "table_reservations",
+      "rowCount": 45,
+      "hasData": true,
+      "sampleData": [
+        {
+          "id": "c1830e86-5ba1-4e7e-a893-8c05514ad52a",
+          "restaurant_id": "11111111-1111-1111-1111-111111111111",
+          "table_id": null,
+          "customer_name": "李先生",
+          "customer_phone": "0919601421",
+          "customer_email": "",
+          "customer_notes": null,
+          "party_size": 3,
+          "reservation_time": "2025-08-08T19:00:00+00:00",
+          "duration_minutes": 120,
+          "estimated_end_time": null,
+          "status": "completed",
+          "special_requests": "",
+          "occasion": null,
+          "deposit_amount": 0,
+          "deposit_paid": false,
+          "deposit_payment_method": null,
+          "notes": null,
+          "created_by": null,
+          "confirmed_at": null,
+          "seated_at": "2025-08-10T04:29:26.76+00:00",
+          "completed_at": "2025-08-10T04:31:18.075+00:00",
+          "created_at": "2025-08-08T10:17:59.353013+00:00",
+          "updated_at": "2025-08-10T04:31:18.075+00:00",
+          "reservation_type": "same_day",
+          "adult_count": 0,
+          "child_count": 0,
+          "child_chair_needed": false
+        }
+      ]
+    },
+    {
+      "name": "table_sessions",
+      "rowCount": 0,
+      "hasData": false,
+      "sampleData": []
+    },
+    {
+      "name": "tables",
+      "rowCount": 14,
+      "hasData": true,
+      "sampleData": [
+        {
+          "id": "11111111-1111-1111-1111-111111111104",
+          "restaurant_id": "11111111-1111-1111-1111-111111111111",
+          "table_number": 4,
+          "name": "B01",
+          "capacity": 4,
+          "min_capacity": 1,
+          "max_capacity": null,
+          "status": "cleaning",
+          "floor_level": 1,
+          "zone": null,
+          "position_x": 0,
+          "position_y": 0,
+          "table_type": "square",
+          "features": null,
+          "qr_code": null,
+          "qr_enabled": true,
+          "ai_assignment_priority": 5,
+          "ai_features_score": null,
+          "current_session_id": null,
+          "last_occupied_at": "2025-08-13T11:46:12.618+00:00",
+          "last_cleaned_at": "2025-08-13T12:39:13.893+00:00",
+          "cleaning_duration_minutes": 15,
+          "is_active": true,
+          "created_at": "2025-08-05T07:37:01.433733+00:00",
+          "updated_at": "2025-08-13T12:39:16.442526+00:00",
+          "metadata": {
+            "merged_with": [],
+            "merged_capacity": 4
+          }
+        }
+      ]
+    },
+    {
+      "name": "takeaway_sequences",
+      "rowCount": 4,
+      "hasData": true,
+      "sampleData": [
+        {
+          "date": "2025-08-05",
+          "last_sequence": 5,
+          "created_at": "2025-08-05T18:20:08.74113+00:00",
+          "updated_at": "2025-08-05T18:39:25.589899+00:00"
+        }
+      ]
+    },
+    {
+      "name": "user_achievements",
+      "rowCount": 0,
+      "hasData": false,
+      "sampleData": []
+    },
+    {
+      "name": "user_sessions",
+      "rowCount": 0,
+      "hasData": false,
+      "sampleData": []
+    },
+    {
+      "name": "users",
+      "rowCount": 1,
+      "hasData": true,
+      "sampleData": [
+        {
+          "id": "7e4a3ad0-b62a-4d7b-b03d-f619178a6946",
+          "phone": "0971715711",
+          "email": "tanawathan@gmail.com",
+          "name": "Customer",
+          "avatar_url": null,
+          "birthday": null,
+          "preferred_language": "zh-TW",
+          "timezone": "Asia/Taipei",
+          "registration_source": "web_app",
+          "is_active": true,
+          "last_active_at": "2025-08-07T20:15:59.012+00:00",
+          "created_at": "2025-08-07T15:50:43.029207+00:00",
+          "updated_at": "2025-08-07T20:15:58.81952+00:00",
+          "notification_preferences": {},
+          "privacy_settings": {},
+          "custom_preferences": {},
+          "login_count": 0
+        }
+      ]
+    },
+    {
+      "name": "virtual_pets",
+      "rowCount": 1,
+      "hasData": true,
+      "sampleData": [
+        {
+          "id": "c1a86507-4d81-4dc3-9b15-5e799adf3c90",
+          "user_id": "default",
+          "name": "阿狸",
+          "species": "fox",
+          "level": 1,
+          "experience": 76,
+          "experience_to_next": 100,
+          "health": 100,
+          "max_health": 100,
+          "happiness": 20,
+          "max_happiness": 100,
+          "energy": 0,
+          "max_energy": 100,
+          "hunger": 100,
+          "max_hunger": 100,
+          "chat_skill": 7,
+          "service_skill": 7,
+          "loyalty_skill": 7,
+          "mood": "hungry",
+          "activity": "resting",
+          "last_feed_time": "2025-08-10T15:47:15.916+00:00",
+          "last_interaction_time": "2025-08-10T15:47:17.508+00:00",
+          "appearance": {
+            "color": "orange",
+            "emoji": "🦊",
+            "pattern": "standard",
+            "accessories": "[]"
+          },
+          "total_interactions": 8,
+          "total_feedings": 2,
+          "days_alive": 0,
+          "created_at": "2025-08-10T15:45:06.457617+00:00",
+          "updated_at": "2025-08-11T05:12:47.097+00:00"
+        }
+      ]
+    },
+    {
+      "name": "waitlist",
+      "rowCount": 0,
+      "hasData": false,
+      "sampleData": []
+    }
+  ]
+}

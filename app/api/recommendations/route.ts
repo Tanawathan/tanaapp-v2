@@ -1,17 +1,61 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseServer } from '@/lib/supabase/client'
 
-// 餐廳桌位配置
-const TABLES = [
-  { id: 'T001', name: '1號桌', type: '2人桌', capacity: 2 },
-  { id: 'T002', name: '2號桌', type: '2人桌', capacity: 2 },
-  { id: 'T003', name: '3號桌', type: '4人桌', capacity: 4 },
-  { id: 'T004', name: '4號桌', type: '4人桌', capacity: 4 },
-  { id: 'T005', name: '5號桌', type: '6人桌', capacity: 6 },
-  { id: 'T006', name: '6號桌', type: '6人桌', capacity: 6 },
-  { id: 'T007', name: '7號桌', type: '8人桌', capacity: 8 },
-  { id: 'T008', name: '8號桌', type: '8人桌', capacity: 8 }
-]
+// 動態載入桌位（與 /api/tables 同步邏輯）
+type DbTable = Record<string, any>
+type TableOut = { id: string | number; name: string; capacity: number; type: string }
+
+function toNumber(n: any, def = 0): number {
+  const v = typeof n === 'string' ? Number(n) : (typeof n === 'number' ? n : NaN)
+  return Number.isFinite(v) ? v : def
+}
+function truthy(v: any, def = true): boolean {
+  if (v === undefined || v === null) return def
+  if (typeof v === 'boolean') return v
+  if (typeof v === 'number') return v !== 0
+  if (typeof v === 'string') return ['1','true','t','y','yes','on','enabled'].includes(v.toLowerCase().trim())
+  return def
+}
+function normalizeStatus(s: any): string {
+  if (typeof s !== 'string') return 'available'
+  return s.toLowerCase().trim()
+}
+function normalizeDbTable(t: DbTable): TableOut {
+  const cap = toNumber(t.capacity ?? t.seats ?? t.seat_count, 0)
+  const name = (t.name || t.table_number || t.label || t.code || t.no || `桌位${t.id}`).toString()
+  return { id: t.id, name, capacity: cap, type: `${cap}人桌` }
+}
+async function loadActiveTables() : Promise<{ tables: TableOut[]; source: string }> {
+  const sb = supabaseServer()
+  const tries: Array<{ table: string; isActive: (row: DbTable) => boolean; }>= [
+    { table: 'tables', isActive: (r) => { const s=normalizeStatus(r.status); return truthy(r.is_active,true) && !['maintenance','cleaning','inactive','out_of_order'].includes(s) } },
+    { table: 'restaurant_tables', isActive: (r) => { const s=normalizeStatus(r.status); return truthy(r.is_active,true) && !['maintenance','cleaning','inactive','out_of_order'].includes(s) } },
+    { table: 'dining_tables', isActive: (r) => { const s=normalizeStatus(r.status); return truthy(r.is_active,true) && !['maintenance','cleaning','inactive','out_of_order'].includes(s) } },
+    { table: 'tables_v2', isActive: (r) => { const s=normalizeStatus(r.status); return truthy(r.is_active,true) && !['maintenance','cleaning','inactive','out_of_order'].includes(s) } },
+  ]
+  for (const t of tries) {
+    try {
+      const { data, error } = await sb.from(t.table).select('*')
+      if (!error && data && Array.isArray(data) && data.length > 0) {
+        const rows = data as unknown as DbTable[]
+        const filtered = rows.filter(t.isActive)
+        return { tables: filtered.map(normalizeDbTable), source: t.table }
+      }
+    } catch {}
+  }
+  // fallback 若 DB 尚未建表
+  const FALLBACK: TableOut[] = [
+    { id: 1, name: '1號桌', capacity: 2, type: '雙人桌' },
+    { id: 2, name: '2號桌', capacity: 2, type: '雙人桌' },
+    { id: 3, name: '3號桌', capacity: 4, type: '四人桌' },
+    { id: 4, name: '4號桌', capacity: 4, type: '四人桌' },
+    { id: 5, name: '5號桌', capacity: 6, type: '六人桌' },
+    { id: 6, name: '6號桌', capacity: 6, type: '六人桌' },
+    { id: 7, name: '7號桌', capacity: 8, type: '八人桌' },
+    { id: 8, name: '8號桌', capacity: 8, type: '八人桌' },
+  ]
+  return { tables: FALLBACK, source: 'fallback' }
+}
 
 // 營業時間設定（預設值 + 嘗試從資料庫讀取覆蓋）
 type HoursConfig = {
@@ -251,19 +295,53 @@ function generateTimeSlots(cfg: HoursConfigMulti): string[] {
 }
 
 // 日內資料 + 記憶體判斷 30 分鐘內是否已有預約
-function has30MinConflict(
-  datetime: string,
-  reservations: Array<{ reservation_time: string }>
-) {
-  const requestTime = new Date(datetime)
-  const windowStart = new Date(requestTime.getTime() - 30 * 60 * 1000)
-  const windowEnd = new Date(requestTime.getTime() + 30 * 60 * 1000)
+function floorToIntervalMs(ts: number, intervalMin: number) {
+  const m = intervalMin * 60 * 1000
+  return Math.floor(ts / m) * m
+}
 
-  for (const r of reservations) {
-    const t = new Date(r.reservation_time)
-    if (t >= windowStart && t <= windowEnd) return true
+function buildSlotAvailability(
+  desiredISO: string,
+  partySize: number,
+  tables: TableOut[],
+  reservations: Array<{ reservation_time: string; table_id?: string | number; status: string; duration_minutes?: number }>,
+  intervalMin: number
+) {
+  const desiredStart = new Date(desiredISO).getTime()
+  const PRE_BLOCK_MS = 90*60*1000
+  const POST_BLOCK_MS = 120*60*1000
+  const SLOT_MS = intervalMin * 60 * 1000
+  const slotStart = floorToIntervalMs(desiredStart, intervalMin)
+  const slotEnd = slotStart + SLOT_MS
+  // 計算被封鎖的桌位
+  const blocked = new Set<string|number>()
+  const overlapping = reservations.filter(r=>{
+    if (['cancelled','no_show','completed'].includes((r.status||'').toLowerCase())) return false
+    const s = new Date(r.reservation_time).getTime()
+    const blockStart = s - PRE_BLOCK_MS
+    const blockEnd = s + POST_BLOCK_MS
+    return desiredStart >= blockStart && desiredStart < blockEnd
+  })
+  overlapping.forEach(r=>{ if(r.table_id) blocked.add(r.table_id) })
+  // 30 分鐘僅接待一組：同一個 slot 內若已存在任一預約，該時段即不可接受新預約
+  const slotTaken = reservations.some(r => {
+    if (['cancelled','no_show','completed'].includes((r.status||'').toLowerCase())) return false
+    const t = new Date(r.reservation_time).getTime()
+    return t >= slotStart && t < slotEnd
+  })
+  const freeTables = tables.filter(t=> !blocked.has(t.id))
+  const suitable = freeTables.filter(t=> (t.capacity||0) >= partySize).sort((a,b)=>a.capacity-b.capacity)
+  let available = !slotTaken && suitable.length>0
+  if (!available && !slotTaken && partySize >= 7) {
+    // 7-8 位特例：允許 6+2 的兩桌組合
+    const sixes = freeTables.filter(t => (t.capacity||0) >= 6)
+    const twos = freeTables.filter(t => (t.capacity||0) >= 2)
+    for (const t6 of sixes) {
+      const t2 = twos.find(t => String(t.id) !== String(t6.id))
+      if (t2) { available = true; break }
+    }
   }
-  return false
+  return { available, suitableCount: suitable.length, blockedCount: blocked.size, slotTaken }
 }
 
 export async function GET(request: NextRequest) {
@@ -271,7 +349,8 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const date = searchParams.get('date')
     const partySize = parseInt(searchParams.get('partySize') || '2')
-    const preferredTime = searchParams.get('preferredTime') // 用戶原本選擇的時間
+  const preferredTime = searchParams.get('preferredTime') // 用戶原本選擇的時間
+  const excludeId = searchParams.get('excludeId') || undefined
 
     if (!date) {
       return NextResponse.json({ error: '請提供日期' }, { status: 400 })
@@ -331,37 +410,42 @@ export async function GET(request: NextRequest) {
     } catch {}
     let query = sb
       .from('table_reservations')
-      .select('reservation_time,status')
+      .select('id,reservation_time,status,table_id,duration_minutes')
       .gte('reservation_time', dayStart)
       .lte('reservation_time', dayEnd)
-      .in('status', ['confirmed', 'pending'])
+      .in('status', ['confirmed', 'pending', 'seated'])
 
     if (restaurantId) {
       query = query.eq('restaurant_id', restaurantId)
     }
 
-    const { data: dayReservations, error: rerr } = await query
+  const { data: dayReservationsRaw, error: rerr } = await query
 
     if (rerr) {
       console.error('read reservations error:', rerr)
       return NextResponse.json({ error: '讀取預約資料失敗' }, { status: 500 })
     }
+    // 載入桌位，先以桌況容量判斷每個時段
+  const { tables: activeTables } = await loadActiveTables()
+  const dayReservations = (dayReservationsRaw || []).filter(r => excludeId ? String((r as any).id) !== String(excludeId) : true)
+
     const availableSlots: Array<{
       time: string
       available: boolean
       reason?: string
       conflictCount?: number
+      blockedCount?: number
     }> = []
 
     // 檢查每個時段的可用性
     for (const timeSlot of timeSlots) {
       const datetime = `${date}T${timeSlot}:00+08:00`
-      const conflict = has30MinConflict(datetime, dayReservations || [])
+  const result = buildSlotAvailability(datetime, partySize, activeTables, dayReservations || [], hours.interval)
       availableSlots.push({
         time: timeSlot,
-        available: !conflict,
-        reason: conflict ? '30分鐘內已有其他預約' : '時段可用',
-        conflictCount: conflict ? 1 : 0,
+        available: result.available,
+        reason: result.available ? '時段可用' : (result.slotTaken ? '該30分鐘時段已有預約' : '桌況容量不足或時段衝突'),
+        blockedCount: result.blockedCount,
       })
     }
 
@@ -393,8 +477,8 @@ export async function GET(request: NextRequest) {
       date,
       partySize,
       preferredTime: preferredTimeStatus,
-      availableSlots: availableSlots.filter(slot => slot.available),
-      unavailableSlots: availableSlots.filter(slot => !slot.available),
+  availableSlots: availableSlots.filter(slot => slot.available),
+  unavailableSlots: availableSlots.filter(slot => !slot.available),
       recommendations,
       totalAvailable: availableSlots.filter(slot => slot.available).length,
       businessHours: hours,

@@ -1,5 +1,9 @@
 import Link from 'next/link'
 import { headers } from 'next/headers'
+import dynamic from 'next/dynamic'
+
+// 客端元件（避免 SSR）
+const PassModal = dynamic(() => import('../../components/PassModal'), { ssr: false })
 
 // 桌位對照表
 const TABLE_NAMES: Record<number, { name: string; type: string }> = {
@@ -78,8 +82,9 @@ export default async function ReservationsPage({ searchParams }: { searchParams:
                   <div className="text-xs text-gray-500 mt-1">用餐時間: {r.duration_minutes}分鐘</div>
                 )}
               </div>
-              <div className="text-xs text-gray-400">
-                {new Date(r.created_at).toLocaleString('zh-TW')}
+              <div className="flex flex-col items-end gap-1">
+                <div className="text-xs text-gray-400">{new Date(r.created_at).toLocaleString('zh-TW')}</div>
+                <PassModal res={r} />
               </div>
             </div>
           </li>

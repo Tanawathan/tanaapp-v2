@@ -1,108 +1,106 @@
 import { NextResponse } from 'next/server'
 import { supabaseServer } from '@/lib/supabase/client'
 
-// 桌位設定 - 可以後續移至資料庫管理
-const TABLES = [
-  { id: 1, name: '1號桌', capacity: 2, type: '雙人桌' },
-  { id: 2, name: '2號桌', capacity: 2, type: '雙人桌' },
-  { id: 3, name: '3號桌', capacity: 4, type: '四人桌' },
-  { id: 4, name: '4號桌', capacity: 4, type: '四人桌' },
-  { id: 5, name: '5號桌', capacity: 4, type: '四人桌' },
-  { id: 6, name: '6號桌', capacity: 6, type: '六人桌' },
-  { id: 7, name: '7號桌', capacity: 6, type: '六人桌' },
-  { id: 8, name: '8號桌', capacity: 8, type: '八人桌' },
-];
+// 動態載入桌位（與 /api/tables 規則一致）
+type DbTable = Record<string, any>
+type TableOut = { id: string | number; name: string; capacity: number; type: string }
 
-// 檢查30分鐘內預約衝突
-async function checkReservationConflict(datetime: string, partySize: number) {
-  const supabase = supabaseServer();
-  
-  // 計算30分鐘前後的時間範圍
-  const targetTime = new Date(datetime);
-  const startTime = new Date(targetTime.getTime() - 30 * 60 * 1000); // 30分鐘前
-  const endTime = new Date(targetTime.getTime() + 30 * 60 * 1000);   // 30分鐘後
-
-  console.log('檢查預約衝突:', {
-    targetTime: targetTime.toISOString(),
-    startTime: startTime.toISOString(),
-    endTime: endTime.toISOString(),
-    partySize
-  });
-
-  // 查詢該時段內的所有有效預約
-  const { data: conflictingReservations, error } = await supabase
-    .from('table_reservations')
-    .select('id, customer_name, party_size, reservation_time, status')
-    .gte('reservation_time', startTime.toISOString())
-    .lte('reservation_time', endTime.toISOString())
-    .in('status', ['confirmed', 'pending']);
-
-  if (error) {
-    console.error('查詢預約衝突錯誤:', error);
-    throw new Error(`預約衝突檢查失敗: ${error.message}`);
+function toNumber(n: any, def = 0): number {
+  const v = typeof n === 'string' ? Number(n) : (typeof n === 'number' ? n : NaN)
+  return Number.isFinite(v) ? v : def
+}
+function truthy(v: any, def = true): boolean {
+  if (v === undefined || v === null) return def
+  if (typeof v === 'boolean') return v
+  if (typeof v === 'number') return v !== 0
+  if (typeof v === 'string') return ['1','true','t','y','yes','on','enabled'].includes(v.toLowerCase().trim())
+  return def
+}
+function normalizeStatus(s: any): string {
+  if (typeof s !== 'string') return 'available'
+  return s.toLowerCase().trim()
+}
+function normalizeDbTable(t: DbTable): TableOut {
+  const cap = toNumber(t.capacity ?? t.seats ?? t.seat_count, 0)
+  const name = (t.name || t.table_number || t.label || t.code || t.no || `桌位${t.id}`).toString()
+  return { id: t.id, name, capacity: cap, type: `${cap}人桌` }
+}
+async function loadActiveTables() : Promise<{ tables: TableOut[]; source: string }> {
+  const sb = supabaseServer()
+  const tries: Array<{ table: string; isActive: (row: DbTable) => boolean; }>= [
+    { table: 'tables', isActive: (r) => { const s=normalizeStatus(r.status); return truthy(r.is_active,true) && !['maintenance','cleaning','inactive','out_of_order'].includes(s) } },
+    { table: 'restaurant_tables', isActive: (r) => { const s=normalizeStatus(r.status); return truthy(r.is_active,true) && !['maintenance','cleaning','inactive','out_of_order'].includes(s) } },
+    { table: 'dining_tables', isActive: (r) => { const s=normalizeStatus(r.status); return truthy(r.is_active,true) && !['maintenance','cleaning','inactive','out_of_order'].includes(s) } },
+    { table: 'tables_v2', isActive: (r) => { const s=normalizeStatus(r.status); return truthy(r.is_active,true) && !['maintenance','cleaning','inactive','out_of_order'].includes(s) } },
+  ]
+  for (const t of tries) {
+    try {
+      const { data, error } = await sb.from(t.table).select('*')
+      if (!error && data && Array.isArray(data) && data.length > 0) {
+        const rows = data as unknown as DbTable[]
+        const filtered = rows.filter(t.isActive)
+        return { tables: filtered.map(normalizeDbTable), source: t.table }
+      }
+    } catch {}
   }
-
-  console.log('找到的衝突預約:', conflictingReservations);
-
-  // 檢查是否有衝突
-  if (conflictingReservations && conflictingReservations.length > 0) {
-    const conflictInfo = conflictingReservations.map((r: any) => 
-      `${new Date(r.reservation_time).toLocaleString('zh-TW', {timeZone: 'Asia/Taipei'})} (${r.party_size}人)`
-    ).join(', ');
-
-    return {
-      hasConflict: true,
-      conflictCount: conflictingReservations.length,
-      conflictInfo,
-      conflictingReservations
-    };
-  }
-
-  return {
-    hasConflict: false,
-    conflictCount: 0,
-    conflictInfo: null,
-    conflictingReservations: []
-  };
+  // fallback 若 DB 尚未建表
+  const FALLBACK: TableOut[] = [
+    { id: 1, name: '1號桌', capacity: 2, type: '雙人桌' },
+    { id: 2, name: '2號桌', capacity: 2, type: '雙人桌' },
+    { id: 3, name: '3號桌', capacity: 4, type: '四人桌' },
+    { id: 4, name: '4號桌', capacity: 4, type: '四人桌' },
+    { id: 5, name: '5號桌', capacity: 4, type: '四人桌' },
+    { id: 6, name: '6號桌', capacity: 6, type: '六人桌' },
+    { id: 7, name: '7號桌', capacity: 6, type: '六人桌' },
+    { id: 8, name: '8號桌', capacity: 8, type: '八人桌' },
+  ]
+  return { tables: FALLBACK, source: 'fallback' }
 }
 
-// 舊的桌位可用性檢查函數（改名但保留備用）
-async function checkTableCapacity(datetime: string, partySize: number) {
-  const supabase = supabaseServer();
-  
-  // 計算30分鐘前後的時間範圍
-  const targetTime = new Date(datetime);
-  const startTime = new Date(targetTime.getTime() - 30 * 60 * 1000);
-  const endTime = new Date(targetTime.getTime() + 30 * 60 * 1000);
-
-  // 查詢該時段已有的預約總數和人數
-  const { data: reservations, error } = await supabase
+// 依 −90/+120 分鐘規則，回傳與欲預約時間重疊的預約（用於封鎖桌位）
+async function getOverlappingReservations(datetimeISO: string) {
+  const sb = supabaseServer()
+  const desiredStart = new Date(datetimeISO).getTime()
+  const PRE_BLOCK_MS = 90 * 60 * 1000
+  const POST_BLOCK_MS = 120 * 60 * 1000
+  const start = new Date(desiredStart - POST_BLOCK_MS)
+  const end = new Date(desiredStart + POST_BLOCK_MS)
+  const restaurantId = process.env.RESTAURANT_ID || null
+  let q = sb
     .from('table_reservations')
-    .select('party_size')
-    .gte('reservation_time', startTime.toISOString())
-    .lte('reservation_time', endTime.toISOString())
-    .in('status', ['confirmed', 'pending']);
+    .select('id, table_id, reservation_time, status, party_size, duration_minutes')
+    .gte('reservation_time', start.toISOString())
+    .lte('reservation_time', end.toISOString())
+    .in('status', ['confirmed', 'pending', 'seated'])
+  if (restaurantId) q = q.eq('restaurant_id', restaurantId)
+  const { data, error } = await q
+  if (error) throw error
+  // 過濾出 desiredStart ∈ [s−90m, s+120m) 的預約
+  const overlapping = (data || []).filter((r: any) => {
+    const s = new Date(r.reservation_time).getTime()
+    const blockStart = s - PRE_BLOCK_MS
+    const blockEnd = s + POST_BLOCK_MS
+    return desiredStart >= blockStart && desiredStart < blockEnd
+  })
+  return overlapping
+}
 
-  if (error) {
-    throw new Error(`桌位容量查詢失敗: ${error.message}`);
-  }
+// 在可用桌位中，選出最合適的一張（容量最接近但足以容納）
+function pickBestTable(tables: TableOut[], partySize: number): TableOut | null {
+  const suitable = tables.filter(t => (t.capacity || 0) >= partySize)
+  suitable.sort((a, b) => (a.capacity - b.capacity) || (String(a.name).localeCompare(String(b.name))))
+  return suitable[0] || null
+}
 
-  // 計算已預約的總人數
-  const totalBooked = reservations?.reduce((sum: number, r: any) => sum + (r.party_size || 0), 0) || 0;
-  
-  // 餐廳總容量（假設8張桌位總計40人）
-  const totalCapacity = 2 + 2 + 4 + 4 + 4 + 6 + 6 + 8; // 36人
-  
-  // 檢查是否有足夠容量
-  const availableCapacity = totalCapacity - totalBooked;
-  
-  if (availableCapacity >= partySize) {
-    // 根據人數返回建議桌位（邏輯上的，不是真實的資料庫ID）
-    const suggestedTable = TABLES.find(table => table.capacity >= partySize);
-    return suggestedTable || TABLES[0];
+// 特例：8 位優先拆成 6+2
+function pickSixPlusTwoCombo(tables: TableOut[]): { primary: TableOut; secondary: TableOut } | null {
+  const sixOrMore = tables.filter(t => (t.capacity || 0) >= 6).sort((a,b)=>a.capacity-b.capacity)
+  const twoOrMore = tables.filter(t => (t.capacity || 0) >= 2).sort((a,b)=>a.capacity-b.capacity)
+  for (const t6 of sixOrMore) {
+    const t2 = twoOrMore.find(t => String(t.id) !== String(t6.id))
+    if (t2) return { primary: t6, secondary: t2 }
   }
-  
-  return null;
+  return null
 }
 
 // 顧客端查詢：必須以 phone 作為查詢條件，避免回傳所有訂位資料
@@ -168,27 +166,74 @@ export async function POST(req: Request) {
       }
     }
 
-    // 基於實際 table_reservations schema 調整插入欄位
-    // 組合日期時間，使用台灣時區 (+08:00)
+    // 組合日期時間（台灣時區 +08:00）
     const reservationDateTime = `${payload.reservation_date}T${payload.reservation_time}:00+08:00`
+
+    // 讀取活躍桌位並套用 −90/+120 規則計算封鎖
+    const { tables: activeTables, source } = await loadActiveTables()
+    const overlapping = await getOverlappingReservations(reservationDateTime)
+    const PRE_BLOCK_MS = 90 * 60 * 1000
+    const POST_BLOCK_MS = 120 * 60 * 1000
+    const desiredStart = new Date(reservationDateTime).getTime()
+    const SLOT_MS = 30 * 60 * 1000
+    const slotStart = Math.floor(desiredStart / SLOT_MS) * SLOT_MS
+    const slotEnd = slotStart + SLOT_MS
+    const blocked = new Set<string | number>()
+    for (const r of overlapping) {
+      const s = new Date(r.reservation_time).getTime()
+      const blockStart = s - PRE_BLOCK_MS
+      const blockEnd = s + POST_BLOCK_MS
+      if (desiredStart >= blockStart && desiredStart < blockEnd) {
+        if (r.table_id) blocked.add(r.table_id)
+      }
+    }
+    // 一個 30 分鐘 slot 僅接待一組：若 slot 內已有任何有效預約則拒絕
+    const slotTaken = overlapping.some((r:any) => {
+      const t = new Date(r.reservation_time).getTime()
+      return t >= slotStart && t < slotEnd && ['confirmed','pending','seated'].includes(String(r.status||'').toLowerCase())
+    })
+    if (slotTaken) {
+      return NextResponse.json({
+        available: false,
+        error: '該 30 分鐘時段已有預約',
+        message: '請選擇其他時間（本店每 30 分鐘僅接待一組）'
+      }, { status: 409 })
+    }
+    const freeTables = activeTables.filter(t => !blocked.has(t.id))
+    let chosen = null as TableOut | null
+    let secondary: TableOut | null = null
     
-    // 檢查30分鐘內預約衝突
-    const conflictCheck = await checkReservationConflict(reservationDateTime, payload.party_size);
-    
-    if (conflictCheck.hasConflict) {
-      return NextResponse.json({ 
-        error: '該時段已有其他預約，30分鐘內無法接受重複訂位',
-        message: `衝突預約：${conflictCheck.conflictInfo}`,
-        conflictDetails: conflictCheck.conflictingReservations,
-        available: false
-      }, { status: 409 }); // 409 Conflict
+    // 若顧客有選位，嘗試優先滿足（驗證其仍在 freeTables 內）
+    const prefIds: string[] = Array.isArray(payload.preferred_table_ids) ? payload.preferred_table_ids.map((x:any)=>String(x)) : []
+    if (prefIds.length === 2 && payload.party_size >= 7) {
+      const a = freeTables.find(t => String(t.id) === prefIds[0])
+      const b = freeTables.find(t => String(t.id) === prefIds[1])
+      if (a && b) { chosen = a; secondary = b }
+    }
+    if (!chosen && prefIds.length === 1) {
+      const a = freeTables.find(t => String(t.id) === prefIds[0])
+      if (a && (a.capacity||0) >= payload.party_size) chosen = a
+    }
+
+    // 若未選到或無效，依規則自動分配
+    if (!chosen && payload.party_size >= 7) {
+      const combo = pickSixPlusTwoCombo(freeTables)
+      if (combo) { chosen = combo.primary; secondary = combo.secondary }
+    }
+    if (!chosen) {
+      chosen = pickBestTable(freeTables, payload.party_size)
+    }
+
+    if (!chosen) {
+      return NextResponse.json({
+        available: false,
+        error: '該時段無可用桌位',
+        message: `該時段容量不足或時段衝突（封鎖 ${blocked.size} 張；來源：${source}）`,
+        debug: { freeTableCount: freeTables.length, activeTableCount: activeTables.length }
+      }, { status: 409 })
     }
     
-    // 可選：額外的容量檢查（如果需要）
-    const capacityCheck = await checkTableCapacity(reservationDateTime, payload.party_size);
-    const suggestedTable = capacityCheck || TABLES.find(table => table.capacity >= payload.party_size) || TABLES[0];
-    
-    const insert = {
+    const insert: any = {
       restaurant_id: restaurantId,
       customer_name: payload.customer_name,
       customer_phone: payload.customer_phone,
@@ -197,20 +242,31 @@ export async function POST(req: Request) {
       // customer_id: customerData?.customer_id || null, // 移除：資料表中沒有此欄位
       party_size: payload.party_size,
       reservation_time: reservationDateTime,
-      // table_id: availableTable.id, // 暫時移除，因為資料庫table_id是UUID類型
+      // table_id 將以字串寫入，以相容 uuid 欄位；若為 fallback 則避免寫入
       duration_minutes: 120, // 預設 2 小時
       status: 'confirmed',
       confirmed_at: new Date().toISOString(),
       special_requests: payload.special_requests || null,
       deposit_amount: 0.00,
       deposit_paid: false,
-      reservation_type: customerData ? 'member' : 'online', // 區分會員和訪客訂位
-      adult_count: payload.party_size,
-      child_count: 0,
+  reservation_type: customerData ? 'member' : 'online', // 區分會員和訪客訂位
+  adult_count: typeof payload.adult_count === 'number' ? payload.adult_count : payload.party_size,
+  child_count: typeof payload.child_count === 'number' ? payload.child_count : 0,
       child_chair_needed: false
     }
 
-    console.log('Attempting to insert reservation with table assignment:', insert)
+    // 僅在來源非 fallback 時指派 table_id，避免數值型 ID 與資料表 uuid 衝突
+    if (source !== 'fallback' && chosen?.id) {
+      insert.table_id = String(chosen.id)
+    }
+
+  // 若為 7-8 位且選到 6+2，將副桌資訊寫入 notes 方便現場識別
+  if (payload.party_size >= 7 && secondary) {
+      const note = `second_table_id=${secondary.id}; second_table_name=${secondary.name}; second_table_type=${secondary.type}`
+      insert.notes = insert.notes ? `${insert.notes}\n${note}` : note
+    }
+
+    console.log('Attempting to insert reservation with table assignment:', { ...insert, table_id: insert.table_id || '(not assigned)' })
     const sb = supabaseServer()
     const { data, error } = await sb.from('table_reservations').insert(insert).select('*').single()
     
@@ -227,8 +283,11 @@ export async function POST(req: Request) {
     console.log('Successfully inserted reservation:', data)
     return NextResponse.json({ 
       data,
-      assignedTable: suggestedTable,
-      message: `預約成功！已安排 ${suggestedTable.name}（${suggestedTable.type}）`
+      assignedTable: chosen,
+      ...(secondary ? { additionalTable: secondary } : {}),
+      message: secondary
+        ? `預約成功！已安排 ${chosen.name}（${chosen.type}） + ${secondary.name}（${secondary.type}）`
+        : `預約成功！已安排 ${chosen.name}（${chosen.type}）`
     })
   } catch (e) {
     console.error('POST /api/reservations error:', e)

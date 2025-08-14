@@ -1,0 +1,92 @@
+{
+  "customer_users": {
+    "success": true,
+    "recordCount": 0,
+    "backupPath": "C:\\TanaAPP\\tanaapp-v2\\backups\\customer_users_backup.json"
+  },
+  "profiles": {
+    "success": true,
+    "recordCount": 0,
+    "backupPath": "C:\\TanaAPP\\tanaapp-v2\\backups\\profiles_backup.json"
+  },
+  "customer_preferences": {
+    "success": true,
+    "recordCount": 1,
+    "backupPath": "C:\\TanaAPP\\tanaapp-v2\\backups\\customer_preferences_backup.json"
+  },
+  "customer_points": {
+    "success": true,
+    "recordCount": 0,
+    "backupPath": "C:\\TanaAPP\\tanaapp-v2\\backups\\customer_points_backup.json"
+  },
+  "customer_points_transactions": {
+    "success": true,
+    "recordCount": 0,
+    "backupPath": "C:\\TanaAPP\\tanaapp-v2\\backups\\customer_points_transactions_backup.json"
+  },
+  "loyalty_points": {
+    "success": true,
+    "recordCount": 0,
+    "backupPath": "C:\\TanaAPP\\tanaapp-v2\\backups\\loyalty_points_backup.json"
+  },
+  "loyalty_transactions": {
+    "success": true,
+    "recordCount": 0,
+    "backupPath": "C:\\TanaAPP\\tanaapp-v2\\backups\\loyalty_transactions_backup.json"
+  },
+  "menu_items": {
+    "success": true,
+    "recordCount": 1,
+    "backupPath": "C:\\TanaAPP\\tanaapp-v2\\backups\\menu_items_backup.json"
+  },
+  "menu_categories": {
+    "success": true,
+    "recordCount": 1,
+    "backupPath": "C:\\TanaAPP\\tanaapp-v2\\backups\\menu_categories_backup.json"
+  },
+  "combo_products": {
+    "success": true,
+    "recordCount": 9,
+    "backupPath": "C:\\TanaAPP\\tanaapp-v2\\backups\\combo_products_backup.json"
+  },
+  "customer_reservations": {
+    "success": true,
+    "recordCount": 0,
+    "backupPath": "C:\\TanaAPP\\tanaapp-v2\\backups\\customer_reservations_backup.json"
+  },
+  "table_reservations": {
+    "success": true,
+    "recordCount": 45,
+    "backupPath": "C:\\TanaAPP\\tanaapp-v2\\backups\\table_reservations_backup.json"
+  },
+  "customer_orders": {
+    "success": true,
+    "recordCount": 0,
+    "backupPath": "C:\\TanaAPP\\tanaapp-v2\\backups\\customer_orders_backup.json"
+  },
+  "customer_favorites": {
+    "success": true,
+    "recordCount": 0,
+    "backupPath": "C:\\TanaAPP\\tanaapp-v2\\backups\\customer_favorites_backup.json"
+  },
+  "favorites": {
+    "success": true,
+    "recordCount": 0,
+    "backupPath": "C:\\TanaAPP\\tanaapp-v2\\backups\\favorites_backup.json"
+  },
+  "customer_reviews": {
+    "success": true,
+    "recordCount": 0,
+    "backupPath": "C:\\TanaAPP\\tanaapp-v2\\backups\\customer_reviews_backup.json"
+  },
+  "reviews": {
+    "success": true,
+    "recordCount": 0,
+    "backupPath": "C:\\TanaAPP\\tanaapp-v2\\backups\\reviews_backup.json"
+  },
+  "customer_coupons": {
+    "success": true,
+    "recordCount": 0,
+    "backupPath": "C:\\TanaAPP\\tanaapp-v2\\backups\\customer_coupons_backup.json"
+  }
+}

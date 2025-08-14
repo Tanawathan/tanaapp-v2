@@ -183,3 +183,8 @@ body {
 
 /* Pixel font */
 .font-pixel { font-family: var(--font-vt323); }
+
+/* Tana date input tweaks */
+input.tana-date::-webkit-datetime-edit { padding: 0; }
+input.tana-date::-webkit-calendar-picker-indicator { filter: grayscale(20%); opacity: .9; }
+input.tana-date { height: 2.25rem; }

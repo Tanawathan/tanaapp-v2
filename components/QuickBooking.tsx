@@ -2,7 +2,7 @@
 import { useState } from 'react'
 import { CalendarDaysIcon, ClockIcon, UserGroupIcon, PhoneIcon } from '@heroicons/react/24/outline'
 
-export default function QuickBooking() {
+export default function QuickBooking({ compact = false, bare = false }: { compact?: boolean; bare?: boolean }) {
   const [formData, setFormData] = useState({
     date: '',
     time: '',
@@ -65,27 +65,55 @@ export default function QuickBooking() {
     return dates
   }
 
+  const Wrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+    bare ? <div>{children}</div> : <div className="pixel-card p-6">{children}</div>
+  )
+
   return (
-    <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-6">
+    <Wrapper>
       <div className="flex items-center gap-2 mb-6">
-        <CalendarDaysIcon className="w-6 h-6 text-violet-600" />
-        <h2 className="text-xl font-bold text-gray-900">快速預約</h2>
+        <CalendarDaysIcon className="w-6 h-6" />
+        <h2 className="font-pixel text-2xl">快速預約</h2>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
+      {compact ? (
+        <div className="space-y-3">
+          <div className="grid grid-cols-2 gap-2">
+            {getAvailableDates().slice(0, 2).map((date) => (
+              <button key={date.value} type="button" onClick={() => setFormData({ ...formData, date: date.value })} className={`p-2 text-sm ${formData.date === date.value ? 'pixel-btn' : 'pixel-chip'}`}>
+                {date.label}
+              </button>
+            ))}
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            {timeSlots.slice(0, 6).map((time) => (
+              <button key={time} type="button" onClick={() => setFormData({ ...formData, time })} className={`p-2 text-sm ${formData.time === time ? 'pixel-btn' : 'pixel-chip'}`}>
+                {time}
+              </button>
+            ))}
+          </div>
+          <div className="flex items-center gap-2">
+            {[1,2,3,4].map(n => (
+              <button key={n} type="button" onClick={() => setFormData({ ...formData, partySize: n })} className={`px-3 py-2 text-sm ${formData.partySize === n ? 'pixel-btn' : 'pixel-chip'}`}>{n}</button>
+            ))}
+          </div>
+          <button type="button" onClick={handleSubmit as any} disabled={!formData.date || !formData.time || isLoading} className={`w-full py-2 ${(!formData.date || !formData.time || isLoading) ? 'pixel-chip opacity-60 cursor-not-allowed' : 'pixel-btn'}`}>
+            {isLoading ? '預約中...' : '立即預約'}
+          </button>
+        </div>
+      ) : (
+        <form onSubmit={handleSubmit} className="space-y-4">
         {/* 日期選擇 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">選擇日期</label>
+          <label className="block text-sm font-pixel mb-2">選擇日期</label>
           <div className="grid grid-cols-4 gap-2">
             {getAvailableDates().map((date) => (
               <button
                 key={date.value}
                 type="button"
                 onClick={() => setFormData({ ...formData, date: date.value })}
-                className={`p-2 text-sm rounded-lg border transition-all ${
-                  formData.date === date.value
-                    ? 'bg-violet-600 text-white border-violet-600'
-                    : 'bg-gray-50 text-gray-700 border-gray-200 hover:border-violet-300'
+                className={`p-2 text-sm ${
+                  formData.date === date.value ? 'pixel-btn' : 'pixel-chip'
                 }`}
               >
                 {date.label}
@@ -96,17 +124,15 @@ export default function QuickBooking() {
 
         {/* 時間選擇 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">用餐時間</label>
+          <label className="block text-sm font-pixel mb-2">用餐時間</label>
           <div className="grid grid-cols-4 gap-2">
             {timeSlots.map((time) => (
               <button
                 key={time}
                 type="button"
                 onClick={() => setFormData({ ...formData, time })}
-                className={`p-2 text-sm rounded-lg border transition-all ${
-                  formData.time === time
-                    ? 'bg-violet-600 text-white border-violet-600'
-                    : 'bg-gray-50 text-gray-700 border-gray-200 hover:border-violet-300'
+                className={`p-2 text-sm ${
+                  formData.time === time ? 'pixel-btn' : 'pixel-chip'
                 }`}
               >
                 {time}
@@ -117,19 +143,17 @@ export default function QuickBooking() {
 
         {/* 人數選擇 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">用餐人數</label>
+          <label className="block text-sm font-pixel mb-2">用餐人數</label>
           <div className="flex items-center gap-3">
-            <UserGroupIcon className="w-5 h-5 text-gray-400" />
+            <UserGroupIcon className="w-5 h-5" />
             <div className="flex items-center gap-2">
               {[1, 2, 3, 4, 5, 6, 7, 8].map((num) => (
                 <button
                   key={num}
                   type="button"
                   onClick={() => setFormData({ ...formData, partySize: num })}
-                  className={`w-10 h-10 rounded-lg border text-sm font-medium transition-all ${
-                    formData.partySize === num
-                      ? 'bg-violet-600 text-white border-violet-600'
-                      : 'bg-gray-50 text-gray-700 border-gray-200 hover:border-violet-300'
+                  className={`w-10 h-10 text-sm font-pixel ${
+                    formData.partySize === num ? 'pixel-btn' : 'pixel-chip'
                   }`}
                 >
                   {num}
@@ -141,15 +165,15 @@ export default function QuickBooking() {
 
         {/* 電話號碼 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">聯絡電話</label>
+          <label className="block text-sm font-pixel mb-2">聯絡電話</label>
           <div className="relative">
-            <PhoneIcon className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
+            <PhoneIcon className="absolute left-3 top-3 w-5 h-5" />
             <input
               type="tel"
               value={formData.phone}
               onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
               placeholder="請輸入您的電話號碼"
-              className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-violet-500"
+              className="w-full pl-10 pr-4 py-3 pixel-border focus:outline-none"
               required
             />
           </div>
@@ -159,23 +183,24 @@ export default function QuickBooking() {
         <button
           type="submit"
           disabled={!formData.date || !formData.time || !formData.phone || isLoading}
-          className="w-full py-3 px-4 bg-gradient-to-r from-violet-600 to-pink-600 text-white font-semibold rounded-lg hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+          className={`w-full py-3 px-4 ${(!formData.date || !formData.time || !formData.phone || isLoading) ? 'pixel-chip opacity-60 cursor-not-allowed' : 'pixel-btn'}`}
         >
           {isLoading ? '預約中...' : '立即預約'}
         </button>
 
         {/* 電話預約提示 */}
-        <div className="text-center pt-4 border-t border-gray-100">
-          <p className="text-sm text-gray-600 mb-2">或直接致電預約</p>
+        <div className="text-center pt-4 border-t-3 border-black">
+          <p className="text-sm mb-2">或直接致電預約</p>
           <a 
             href="tel:0901222861"
-            className="inline-flex items-center gap-2 text-violet-600 font-medium hover:text-violet-700 transition-colors"
+            className="inline-flex items-center gap-2 font-pixel hover:underline"
           >
             <PhoneIcon className="w-4 h-4" />
             0901-222-861
           </a>
         </div>
-      </form>
-    </div>
+        </form>
+      )}
+    </Wrapper>
   )
 }

@@ -11,7 +11,10 @@ export async function GET() {
       'customers', 
       'users',
       'profiles',
-      'customer_profiles'
+      'customer_profiles',
+      // 營業資訊表（若不存在會回報 exists=false）
+      'restaurant_settings',
+      'restaurant_closures',
     ]
     
     const results: any = {}

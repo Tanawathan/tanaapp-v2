@@ -30,6 +30,24 @@ export default function MenuPage() {
   const [categories, setCategories] = useState<Category[]>([])
   const [favorites, setFavorites] = useState<Set<string>>(new Set())
   const [selectedCategory, setSelectedCategory] = useState<string>('all')
+  // 分類代碼正規化（支援中英別名）
+  const normalizeCategory = (value?: string | null) => {
+    const v = String(value || '').trim().toLowerCase()
+    if (!v || v === 'all' || v === '全部') return 'all'
+    if ([
+      'appetizer', '前菜', '開胃菜', '加點', '小點', '單點', '副餐', '小菜', '配菜', 'side', 'sides'
+    ].includes(v)) return 'appetizer'
+    if ([
+      'main', '主餐', '主菜', '套餐', '主食', '便當', '合菜'
+    ].includes(v)) return 'main'
+    if ([
+      'dessert', '甜點', '點心', '甜食', '甜品'
+    ].includes(v)) return 'dessert'
+    if ([
+      'beverage', '飲品', '飲料', '飲', '茶飲', '咖啡'
+    ].includes(v)) return 'beverage'
+    return v
+  }
   const [searchTerm, setSearchTerm] = useState('')
   const [loading, setLoading] = useState(true)
   const [categoriesLoading, setCategoriesLoading] = useState(true)
@@ -40,8 +58,9 @@ export default function MenuPage() {
   }, [])
 
   useEffect(() => {
-    filterProducts()
-  }, [products, selectedCategory, searchTerm])
+    // 當分類或搜尋詞變更時重新獲取產品
+    fetchProducts()
+  }, [selectedCategory, searchTerm])
 
   const fetchCategories = async () => {
     try {
@@ -77,9 +96,23 @@ export default function MenuPage() {
 
   const fetchProducts = async () => {
     try {
-      const response = await fetch('/api/products')
+      setLoading(true)
+      // 根據選擇的分類和搜尋詞構建 API URL
+      const params = new URLSearchParams()
+      if (selectedCategory !== 'all') {
+        params.append('category', selectedCategory)
+      }
+      if (searchTerm.trim()) {
+        params.append('search', searchTerm.trim())
+      }
+      
+      const url = `/api/products${params.toString() ? '?' + params.toString() : ''}`
+      const response = await fetch(url)
       if (response.ok) {
         const data = await response.json()
+        // 只顯示有供應的商品
+        const availableProducts = (data.products || []).filter((p: Product) => p.is_available !== false)
+        setFilteredProducts(availableProducts)
         setProducts(data.products || [])
       }
     } catch (error) {
@@ -87,35 +120,6 @@ export default function MenuPage() {
     } finally {
       setLoading(false)
     }
-  }
-
-  const filterProducts = () => {
-    let filtered = products
-    
-    console.log('篩選前:', {
-      selectedCategory,
-      totalProducts: products.length,
-      availableCategories: [...new Set(products.map(p => p.category))]
-    })
-
-    if (selectedCategory !== 'all') {
-      filtered = filtered.filter(product => product.category === selectedCategory)
-    }
-
-    if (searchTerm) {
-      filtered = filtered.filter(product => 
-        product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        product.description.toLowerCase().includes(searchTerm.toLowerCase())
-      )
-    }
-    
-    console.log('篩選後:', {
-      selectedCategory,
-      filteredCount: filtered.length,
-      searchTerm
-    })
-
-    setFilteredProducts(filtered)
   }
 
   const toggleFavorite = (productId: string) => {
@@ -131,100 +135,53 @@ export default function MenuPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen">
       <TopNavbar />
       
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {/* 頁面標題 */}
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">美味菜單</h1>
-          <p className="text-gray-600">探索我們精心準備的美味佳餚</p>
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+        {/* 標題 */}
+        <div className="text-center">
+          <h1 className="font-pixel text-3xl mb-1">美味菜單</h1>
+          <p className="text-sm">探索我們精心準備的美味佳餚</p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* 左側過濾器 */}
-          <div className="lg:col-span-1 space-y-6">
-            {/* 搜尋框 */}
-            <div className="bg-white rounded-2xl border border-gray-100 p-4">
-              <div className="relative">
-                <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder="搜尋菜品..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent"
-                />
-              </div>
+        {/* 搜尋與分類（水平） */}
+        <div className="pixel-card p-4">
+          <div className="flex flex-col gap-3">
+            <div className="relative">
+              <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5" />
+              <input
+                type="text"
+                placeholder="搜尋菜品..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 pixel-border focus:outline-none"
+              />
             </div>
 
-            {/* 分類過濾 */}
-            <div className="bg-white rounded-2xl border border-gray-100 p-4">
-              <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                <FunnelIcon className="w-5 h-5" />
-                分類篩選
-              </h3>
+            <div className="flex items-center gap-2 overflow-x-auto pb-1">
               {categoriesLoading ? (
-                <div className="flex justify-center items-center py-4">
-                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-violet-600"></div>
-                </div>
+                <div className="py-2 text-sm">載入分類中…</div>
               ) : (
-                <div className="space-y-2">
-                  {categories.map(category => (
-                    <button
-                      key={category.id}
-                      onClick={() => setSelectedCategory(category.id)}
-                      className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
-                        selectedCategory === category.id
-                          ? 'bg-violet-100 text-violet-700 border border-violet-200'
-                          : 'hover:bg-gray-50 text-gray-700'
-                      }`}
-                    >
-                      <span className="text-lg">{category.icon}</span>
-                      <span className="font-medium">{category.name}</span>
-                    </button>
-                  ))}
-                </div>
+                categories.map(category => (
+                  <button
+                    key={category.id}
+                    onClick={() => setSelectedCategory(category.id)}
+                    className={`flex items-center gap-2 px-3 py-2 text-sm font-pixel whitespace-nowrap ${
+                      selectedCategory === category.id ? 'pixel-btn' : 'pixel-chip'
+                    }`}
+                  >
+                    <span>{category.icon}</span>
+                    {category.name}
+                  </button>
+                ))
               )}
             </div>
-
-            {/* 營業時間 */}
-            <div className="bg-white rounded-2xl border border-gray-100 p-4">
-              <h3 className="font-semibold text-gray-900 mb-4">⏰ 營業時間</h3>
-              <div className="space-y-2 text-sm text-gray-600">
-                <div className="flex justify-between">
-                  <span>週一 ~ 週五</span>
-                  <span>11:30 - 21:30</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>週六 ~ 週日</span>
-                  <span>11:30 - 21:30</span>
-                </div>
-              </div>
-            </div>
-
-            {/* 聯絡資訊 */}
-            <div className="bg-white rounded-2xl border border-gray-100 p-4">
-              <h3 className="font-semibold text-gray-900 mb-4">📞 聯絡預約</h3>
-              <div className="space-y-3">
-                <a 
-                  href="tel:0901222861"
-                  className="flex items-center justify-center gap-2 w-full px-4 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700 transition-colors"
-                >
-                  📱 0901-222-861
-                </a>
-                <Link 
-                  href="/book"
-                  className="flex items-center justify-center gap-2 w-full px-4 py-2 border border-violet-600 text-violet-600 rounded-lg hover:bg-violet-50 transition-colors"
-                >
-                  📅 線上預約
-                </Link>
-              </div>
-            </div>
           </div>
+        </div>
 
-          {/* 右側菜品列表 */}
-          <div className="lg:col-span-3">
+        {/* 菜品列表 2/3/4 欄 */}
+        <div>
             {loading ? (
               <div className="flex justify-center items-center h-64">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-violet-600"></div>
@@ -232,15 +189,15 @@ export default function MenuPage() {
             ) : filteredProducts.length === 0 ? (
               <div className="text-center py-12">
                 <div className="text-6xl mb-4">🔍</div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">找不到相關菜品</h3>
-                <p className="text-gray-600">試試調整搜尋條件或選擇其他分類</p>
+                <h3 className="font-pixel text-xl mb-2">找不到相關菜品</h3>
+                <p className="text-sm">試試調整搜尋條件或選擇其他分類</p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+              <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
                 {filteredProducts.map(product => (
-                  <div key={product.id} className="bg-white rounded-2xl border border-gray-100 overflow-hidden hover:shadow-lg transition-shadow">
+                  <div key={product.id} className="pixel-card overflow-hidden">
                     {/* 圖片區域 */}
-                    <div className="aspect-video bg-gradient-to-br from-violet-100 to-pink-100 relative">
+                    <div className="aspect-video bg-gray-100 relative border-b-3 border-black">
                       {product.image_url ? (
                         <img 
                           src={product.image_url} 
@@ -262,7 +219,7 @@ export default function MenuPage() {
                       {/* 收藏按鈕 */}
                       <button
                         onClick={() => toggleFavorite(product.id)}
-                        className="absolute top-3 right-3 p-2 bg-white/90 backdrop-blur-sm rounded-full hover:bg-white transition-colors"
+                        className="absolute top-2 right-2 p-2 pixel-chip"
                       >
                         {favorites.has(product.id) ? (
                           <HeartSolid className="w-5 h-5 text-red-500" />
@@ -272,11 +229,9 @@ export default function MenuPage() {
                       </button>
 
                       {/* 可用性標籤 */}
-                      <div className="absolute top-3 left-3">
-                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                          product.is_available
-                            ? 'bg-green-100 text-green-700'
-                            : 'bg-red-100 text-red-700'
+                      <div className="absolute top-2 left-2">
+                        <span className={`px-2 py-1 text-xs font-pixel ${
+                          product.is_available ? 'pixel-chip' : 'pixel-chip opacity-60'
                         }`}>
                           {product.is_available ? '供應中' : '暫缺'}
                         </span>
@@ -286,13 +241,13 @@ export default function MenuPage() {
                     {/* 內容區域 */}
                     <div className="p-4">
                       <div className="flex justify-between items-start mb-2">
-                        <h3 className="font-bold text-gray-900 text-lg">{product.name}</h3>
-                        <span className="text-lg font-bold text-violet-600">
+                        <h3 className="font-pixel text-lg">{product.name}</h3>
+                        <span className="text-lg font-pixel">
                           ${product.price}
                         </span>
                       </div>
                       
-                      <p className="text-gray-600 text-sm mb-3 line-clamp-2">
+                      <p className="text-sm mb-3 line-clamp-2">
                         {product.description}
                       </p>
 
@@ -313,16 +268,14 @@ export default function MenuPage() {
 
                       {/* 分類標籤 */}
                       <div className="flex justify-between items-center">
-                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+                        <span className="inline-flex items-center px-2 py-1 text-xs font-pixel pixel-chip">
                           {categories.find(c => c.id === product.category)?.name || product.category}
                         </span>
                         
                         <Link 
                           href="/order"
-                          className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
-                            product.is_available
-                              ? 'bg-violet-600 text-white hover:bg-violet-700'
-                              : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                          className={`px-4 py-2 text-sm ${
+                            product.is_available ? 'pixel-btn' : 'pixel-chip opacity-60 cursor-not-allowed'
                           }`}
                         >
                           {product.is_available ? '立即點餐' : '暫時缺貨'}
@@ -333,7 +286,6 @@ export default function MenuPage() {
                 ))}
               </div>
             )}
-          </div>
         </div>
       </main>
     </div>

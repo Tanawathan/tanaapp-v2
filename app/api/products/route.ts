@@ -1,176 +1,137 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { supabaseServer } from '../../../src/lib/supabase/client';
+import { NextResponse } from 'next/server'
+import { supabaseServer } from '../../../src/lib/supabase/client'
 
-export async function GET(request: NextRequest) {
-  try {
-    const { searchParams } = new URL(request.url);
-    const category = searchParams.get('category');
-    const limit = searchParams.get('limit');
-
-    const supabase = supabaseServer();
-
-    // 建構查詢
-    let query = supabase
-      .from('products')
-      .select('*')
-      .order('created_at', { ascending: false });
-
-    // 如果指定分類
-    if (category && category !== 'all') {
-      query = query.eq('category', category);
-    }
-
-    // 如果指定數量限制
-    if (limit) {
-      query = query.limit(parseInt(limit));
-    }
-
-    const { data: products, error } = await query;
-
-    if (error) {
-      console.error('取得產品資料錯誤:', error);
-      return NextResponse.json(
-        { error: '取得菜單失敗', details: error.message },
-        { status: 500 }
-      );
-    }
-
-    // 如果沒有產品資料，回傳示例資料
-    if (!products || products.length === 0) {
-      const sampleProducts = [
-        {
-          id: 'sample-1',
-          name: '招牌牛排',
-          description: '嫩煎牛排配時蔬，口感鮮美',
-          price: 680,
-          category: 'main',
-          is_available: true,
-          rating: 4.5,
-          image_url: null
-        },
-        {
-          id: 'sample-2',
-          name: '凱薩沙拉',
-          description: '新鮮蔬菜配凱薩醬',
-          price: 280,
-          category: 'appetizer',
-          is_available: true,
-          rating: 4.2,
-          image_url: null
-        },
-        {
-          id: 'sample-3',
-          name: '提拉米蘇',
-          description: '經典義式甜點',
-          price: 180,
-          category: 'dessert',
-          is_available: true,
-          rating: 4.8,
-          image_url: null
-        },
-        {
-          id: 'sample-4',
-          name: '現煮咖啡',
-          description: '精選咖啡豆現煮',
-          price: 120,
-          category: 'beverage',
-          is_available: true,
-          rating: 4.0,
-          image_url: null
-        },
-        {
-          id: 'sample-5',
-          name: '海鮮義大利麵',
-          description: '新鮮海鮮配義大利麵',
-          price: 450,
-          category: 'main',
-          is_available: true,
-          rating: 4.6,
-          image_url: null
-        },
-        {
-          id: 'sample-6',
-          name: '鮮果汁',
-          description: '當季新鮮水果現打',
-          price: 150,
-          category: 'beverage',
-          is_available: false,
-          rating: 4.3,
-          image_url: null
-        }
-      ];
-
-      return NextResponse.json({
-        success: true,
-        products: sampleProducts,
-        count: sampleProducts.length,
-        message: '使用示例資料 (未找到資料庫中的產品)'
-      });
-    }
-
-    return NextResponse.json({
-      success: true,
-      products: products,
-      count: products.length
-    });
-
-  } catch (error) {
-    console.error('產品API錯誤:', error);
-    return NextResponse.json(
-      { error: '系統錯誤，請稍後再試' },
-      { status: 500 }
-    );
-  }
+type DbProduct = {
+	id: string
+	name: string
+	description?: string | null
+	price?: number | null
+	image_url?: string | null
+	is_available?: boolean | null
+	// 資料庫可能有不同欄位名稱保存分類
+	category?: string | null
+	category_id?: string | null
+	categoryId?: string | null
 }
 
-// POST - 新增產品 (管理員功能)
-export async function POST(request: NextRequest) {
-  try {
-    const body = await request.json();
-    const { name, description, price, category, image_url, is_available = true } = body;
-
-    if (!name || !price || !category) {
-      return NextResponse.json(
-        { error: '請填寫必要欄位：名稱、價格、分類' },
-        { status: 400 }
-      );
-    }
-
-    const supabase = supabaseServer();
-
-    const { data: newProduct, error } = await supabase
-      .from('products')
-      .insert([{
-        name,
-        description,
-        price: parseFloat(price),
-        category,
-        image_url,
-        is_available,
-        created_at: new Date().toISOString()
-      }])
-      .select()
-      .single();
-
-    if (error) {
-      console.error('新增產品錯誤:', error);
-      return NextResponse.json(
-        { error: '新增產品失敗', details: error.message },
-        { status: 500 }
-      );
-    }
-
-    return NextResponse.json({
-      success: true,
-      message: '產品新增成功',
-      product: newProduct
-    }, { status: 201 });
-
-  } catch (error) {
-    console.error('新增產品API錯誤:', error);
-    return NextResponse.json(
-      { error: '系統錯誤，請稍後再試' },
-      { status: 500 }
-    );
-  }
+function normalizeCategorySlug(value?: string | null): string | null {
+	if (!value) return null
+	const v = String(value).trim().toLowerCase()
+	if (!v || v === 'all' || v === '全部') return 'all'
+	if ([
+		'appetizer', '前菜', '開胃菜', '加點', '小點', '單點', '副餐', '小菜', '配菜', 'side', 'sides'
+	].includes(v)) return 'appetizer'
+	if ([
+		'main', '主餐', '主菜', '套餐', '主食', '便當', '合菜'
+	].includes(v)) return 'main'
+	if ([
+		'dessert', '甜點', '點心', '甜食', '甜品'
+	].includes(v)) return 'dessert'
+	if ([
+		'beverage', '飲品', '飲料', '飲', '茶飲', '咖啡'
+	].includes(v)) return 'beverage'
+	return v
 }
+
+export const dynamic = 'force-dynamic'
+
+export async function GET(req: Request) {
+	const url = new URL(req.url)
+	const categoryParam = url.searchParams.get('category')
+	const search = (url.searchParams.get('search') || '').trim()
+	const limit = Number(url.searchParams.get('limit') || '') || undefined
+
+	const s = supabaseServer()
+
+	// 先抓所有產品，再在程式端處理彈性過濾（避免 SQL 組合造成錯誤）
+	const { data: allProducts, error: prodErr } = await s
+		.from('products')
+		.select('*')
+		.limit(limit ?? 1000)
+
+	if (prodErr) {
+		console.error('[products.GET] supabase products error:', prodErr)
+		return NextResponse.json({ products: [], error: 'failed to fetch products' }, { status: 500 })
+	}
+
+	let products = (allProducts || []) as DbProduct[]
+
+	// 分類過濾
+	if (categoryParam && !['all', '全部'].includes(categoryParam)) {
+		const isUuid = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i.test(categoryParam)
+		let acceptedIds = new Set<string>()
+		let acceptedSlugs = new Set<string>()
+
+		if (isUuid) {
+			// 若傳入的是分類 UUID，順便查出該分類名稱以支援名稱/slug 比對
+			const { data: cat, error: catErr } = await s
+				.from('categories')
+				.select('id,name')
+				.eq('id', categoryParam)
+				.maybeSingle()
+			if (catErr) console.warn('[products.GET] category lookup error:', catErr)
+			if (cat?.id) acceptedIds.add(cat.id)
+			if (cat?.name) {
+				const slug = normalizeCategorySlug(cat.name)
+				if (slug) acceptedSlugs.add(slug)
+				acceptedSlugs.add(cat.name.trim().toLowerCase())
+			}
+			// 同時允許直接用 id 過濾（若產品直接儲存 id）
+			acceptedIds.add(categoryParam)
+		} else {
+			// 文字/slug 形式
+			const slug = normalizeCategorySlug(categoryParam)
+			if (slug) acceptedSlugs.add(slug)
+			acceptedSlugs.add(categoryParam.trim().toLowerCase())
+		}
+
+		products = products.filter((p) => {
+			const key = (p.category ?? p.category_id ?? p.categoryId ?? '').toString().trim()
+			if (!key) return false
+			// 直接 id 比對
+			if (acceptedIds.size && acceptedIds.has(key)) return true
+			// 名稱/slug 比對
+			const kSlug = normalizeCategorySlug(key)
+			if (kSlug && acceptedSlugs.has(kSlug)) return true
+			if (acceptedSlugs.has(key.toLowerCase())) return true
+			return false
+		})
+	}
+
+	// 搜尋過濾
+	if (search) {
+		const sLower = search.toLowerCase()
+		products = products.filter((p) =>
+			(p.name && p.name.toLowerCase().includes(sLower)) ||
+			(p.description && p.description.toLowerCase().includes(sLower))
+		)
+	}
+
+	// 統一輸出格式
+	const out = products.map((p) => ({
+		id: p.id,
+		name: p.name,
+		description: p.description ?? '',
+		price: p.price ?? 0,
+		image_url: p.image_url ?? null,
+		is_available: p.is_available !== false,
+		category: (p.category ?? p.category_id ?? p.categoryId ?? '') as string,
+	}))
+
+	return NextResponse.json({ products: out })
+}
+
+export async function POST(req: Request) {
+	const body = await req.json().catch(() => null)
+	if (!body || !body.name) {
+		return NextResponse.json({ error: 'name is required' }, { status: 400 })
+	}
+	const s = supabaseServer()
+	const { data, error } = await s.from('products').insert(body).select('*').maybeSingle()
+	if (error) {
+		console.error('[products.POST] insert error:', error)
+		return NextResponse.json({ error: 'failed to create product' }, { status: 500 })
+	}
+	return NextResponse.json({ product: data })
+}
+

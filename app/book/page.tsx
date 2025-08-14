@@ -32,11 +32,25 @@ export default function BookPage() {
     message: string;
   } | null>(null)
   const [showRecommendations, setShowRecommendations] = useState(false)
+  const [step, setStep] = useState<'search' | 'details'>('search')
+  const [period, setPeriod] = useState<'all' | 'lunch' | 'dinner'>('all')
 
-  const timeOptions = useMemo(() => ['17:00','17:30','18:00','18:30','19:00','19:30','20:00','20:30'], [])
+  // 後端會依營業時間動態回傳可預約時段；
+  // 這裡的 timeOptions 僅作為「尚未載入推薦時段」的備用顯示，
+  // 依規則：關門 21:00 並需保留 90 分鐘 → 最晚 19:30。
+  const timeOptions = useMemo(() => ['17:00','17:30','18:00','18:30','19:00','19:30'], [])
   const canSubmit = date && time && name.trim() && phone.trim() && party > 0 && tableAvailability?.hasAvailable
 
-  // 獲取推薦時段
+  // 依時間字串判斷區段
+  const getPeriod = (t: string): 'lunch' | 'dinner' | 'other' => {
+    const [hh, mm] = t.split(':').map(Number)
+    const mins = hh * 60 + (mm || 0)
+    if (mins >= 11 * 60 && mins < 15 * 60) return 'lunch'
+    if (mins >= 17 * 60 && mins <= 21 * 60 + 30) return 'dinner'
+    return 'other'
+  }
+
+  // 取得推薦/可用時段（只需要日期與人數）
   async function getRecommendations() {
     if (!date || party <= 0) {
       setRecommendations(null)
@@ -94,14 +108,23 @@ export default function BookPage() {
     }
   }
 
-  // 當日期、時間或人數改變時檢查桌位
+  // 日期/人數變更時，更新可預約時段
   useEffect(() => {
     const timeoutId = setTimeout(() => {
-      checkTableAvailability()
       getRecommendations()
-    }, 500) // 延遲500ms避免過多請求
+    }, 400)
     return () => clearTimeout(timeoutId)
-  }, [date, time, party])
+  }, [date, party])
+
+  // 有選擇時段並進入細節步驟時，檢查桌位
+  useEffect(() => {
+    if (step !== 'details') return
+    if (!date || !time || party <= 0) return
+    const timeoutId = setTimeout(() => {
+      checkTableAvailability()
+    }, 300)
+    return () => clearTimeout(timeoutId)
+  }, [step, date, time, party])
 
   useEffect(() => {
     async function load() {
@@ -191,6 +214,13 @@ export default function BookPage() {
 
   return (
     <main className="mx-auto max-w-3xl p-6">
+      {/* 返回首頁按鈕 */}
+      <div className="mb-4">
+        <Link href="/" className="inline-flex items-center gap-2 text-sm px-3 py-1.5 pixel-chip">
+          <span>←</span>
+          <span>返回首頁</span>
+        </Link>
+      </div>
       <div className="mb-6">
         <h1 className="text-3xl font-bold tracking-tight">線上訂位</h1>
         <p className="mt-2 text-sm text-gray-600">選擇日期與時間，留下您的聯絡資訊，我們將為您保留座位。</p>
@@ -198,47 +228,74 @@ export default function BookPage() {
 
       <section className="overflow-hidden rounded-2xl border bg-white shadow-sm">
         <div className="grid gap-0 md:grid-cols-2">
-          {/* 左側：日期/時間 */}
+          {/* 左側：選日期 / 人數 / 可預約時段 */}
           <div className="p-6 border-b md:border-b-0 md:border-r">
-            <h2 className="mb-4 text-base font-semibold text-gray-900">用餐時間</h2>
+            <h2 className="mb-4 text-base font-semibold text-gray-900">選擇日期與時段</h2>
 
-            <label className="mb-1 block text-sm text-gray-700">選擇日期</label>
+            <label className="mb-1 block text-sm text-gray-700">用餐日期</label>
             <input
               type="date"
               className="w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
               value={date}
-              onChange={e => setDate(e.target.value)}
+              onChange={e => { setDate(e.target.value); setStep('search') }}
             />
 
-            <label className="mt-4 mb-1 block text-sm text-gray-700">時間</label>
-            <div className="flex flex-wrap gap-2">
-              {timeOptions.map(t => (
-                <button
-                  type="button"
-                  key={t}
-                  onClick={() => setTime(t)}
-                  className={`rounded-full border px-3 py-1.5 text-sm transition ${time === t ? 'border-indigo-600 bg-indigo-50 text-indigo-700' : 'hover:bg-gray-50'}`}
-                >
-                  {t}
-                  {availability[t] ? (
-                    <span className="ml-2 rounded bg-gray-100 px-1.5 py-0.5 text-[10px] text-gray-700">已訂 {availability[t]}</span>
-                  ) : null}
+            <label className="mt-4 mb-1 block text-sm text-gray-700">人數</label>
+            <div className="inline-flex items-center rounded-md border">
+              <button type="button" onClick={() => setParty(Math.max(1, party - 1))} className="h-10 w-10 select-none text-lg leading-none hover:bg-gray-50" aria-label="減少人數">−</button>
+              <input type="number" min={1} className="w-16 border-x px-2 text-center text-sm focus:outline-none" value={party} onChange={e => setParty(Math.max(1, Number(e.target.value) || 1))} />
+              <button type="button" onClick={() => setParty(Math.min(20, party + 1))} className="h-10 w-10 select-none text-lg leading-none hover:bg-gray-50" aria-label="增加人數">+</button>
+            </div>
+
+            {/* 時段 Tabs */}
+            <div className="mt-4 flex gap-2 text-sm">
+              {(['all','lunch','dinner'] as const).map(p => (
+                <button key={p} onClick={() => setPeriod(p)} className={`px-3 py-1.5 rounded-full border ${period===p?'border-indigo-600 bg-indigo-50 text-indigo-700':'hover:bg-gray-50'}`}>
+                  {p==='all'?'全天':p==='lunch'?'中午':'晚上'}
                 </button>
               ))}
             </div>
-            <div className="mt-3">
-              <input
-                type="time"
-                className="w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                value={time}
-                onChange={e => setTime(e.target.value)}
-              />
+
+            {/* 可預約時段清單 */}
+            <div className="mt-4">
+              <div className="grid grid-cols-3 gap-2">
+                {(recommendations?.availableSlots || timeOptions.map(t => ({ time:t, available: true })) )
+                  .filter(s => period==='all' ? true : getPeriod(s.time)===period)
+                  .map(s => (
+                    <button
+                      key={s.time}
+                      type="button"
+                      disabled={!s.available}
+                      onClick={() => { setTime(s.time); setStep('details') }}
+                      className={`px-3 py-2 rounded-md text-sm border ${s.available? 'hover:bg-gray-50' : 'opacity-50 cursor-not-allowed'}`}
+                    >
+                      {s.time}
+                    </button>
+                  ))}
+              </div>
+              {!recommendations && (
+                <p className="text-xs text-gray-500 mt-2">提示：先選日期與人數即可顯示可預約時段</p>
+              )}
             </div>
           </div>
 
-          {/* 右側：顧客資訊 */}
+          {/* 右側：顧客資訊（僅在已選時段後顯示） */}
           <div className="p-6">
-            <h2 className="mb-4 text-base font-semibold text-gray-900">聯絡與人數</h2>
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-base font-semibold text-gray-900">{step==='details' ? '確認與聯絡資料' : '等待選擇時段'}</h2>
+              {step==='details' && (
+                <button className="text-xs text-indigo-600 hover:underline" onClick={() => setStep('search')}>變更時段</button>
+              )}
+            </div>
+
+            {step !== 'details' ? (
+              <div className="text-sm text-gray-600">
+                請先於左側選擇日期、人數與可預約的時間。
+              </div>
+            ) : (
+              <>
+            <div className="mb-3 text-sm text-gray-700">已選擇：{date} {time} · {party} 位</div>
+            <h3 className="mb-2 text-sm font-medium text-gray-900">聯絡與人數</h3>
 
             <label className="mb-1 block text-sm text-gray-700">姓名</label>
             <input
@@ -467,9 +524,20 @@ export default function BookPage() {
                 </div>
               </div>
             )}
+              </>
+            )}
           </div>
         </div>
       </section>
+
+      {/* 行動版浮動返回鍵 */}
+      <Link
+        href="/"
+        className="md:hidden fixed bottom-4 right-4 px-3 py-2 text-sm pixel-chip"
+        aria-label="返回首頁"
+      >
+        ← 返回
+      </Link>
     </main>
   )
 }

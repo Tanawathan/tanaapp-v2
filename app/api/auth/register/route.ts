@@ -4,7 +4,7 @@ import { createHash } from 'crypto';
 
 export async function POST(request: NextRequest) {
   try {
-    const { name, email, phone, password } = await request.json();
+  const { name, email, phone, password, marketing_consent = false, terms_accepted = false } = await request.json();
 
     // 驗證必填欄位
     if (!name || !email || !phone || !password) {
@@ -24,52 +24,100 @@ export async function POST(request: NextRequest) {
 
     const supabase = supabaseServer();
 
-    // 由於 customers 資料表可能不存在，我們嘗試不同的方法
-    // 首先檢查是否已有相同 email 或 phone 的訂位記錄
-    const { data: existingReservations, error: checkError } = await supabase
-      .from('table_reservations')
-      .select('customer_phone, customer_email')
-      .or(`customer_phone.eq.${phone},customer_notes.ilike.%${email}%`);
+    // 確認 CRM 會員表是否已有相同 email/phone
+    const lowerEmail = String(email).trim().toLowerCase();
+    const { data: existsByEmail } = await supabase
+      .from('customer_users')
+      .select('id')
+      .eq('email', lowerEmail)
+      .maybeSingle();
 
-    if (checkError) {
-      console.error('檢查現有記錄錯誤:', checkError);
-    }
-
-    // 如果有相同電話的記錄，提示用戶
-    const phoneExists = existingReservations?.some(r => r.customer_phone === phone);
-    if (phoneExists) {
+    if (existsByEmail?.id) {
       return NextResponse.json(
-        { error: '此電話號碼已有訂位記錄，您可以直接使用電話查詢功能' },
+        { error: '此 Email 已被註冊' },
         { status: 409 }
       );
     }
 
-    // 密碼加密（使用SHA-256 + salt）
-    const salt = Math.random().toString(36).substring(2, 15);
-    const hashedPassword = createHash('sha256').update(password + salt).digest('hex');
+    const { data: existsByPhone } = await supabase
+      .from('customer_users')
+      .select('id')
+      .eq('phone', phone)
+      .maybeSingle();
 
-    // 由於沒有獨立的 customers 資料表，我們在一個臨時解決方案中使用 localStorage
-    // 在實際部署中，您需要創建 customers 資料表
-    
-    // 創建會員記錄（模擬版本）
-    const customerId = createHash('md5').update(email + Date.now()).digest('hex');
-    
-    // 在實際應用中，這裡應該存儲到資料庫
-    // 現在我們返回成功，但會員功能有限
-    
-    return NextResponse.json({
+    if (existsByPhone?.id) {
+      return NextResponse.json(
+        { error: '此電話已被註冊' },
+        { status: 409 }
+      );
+    }
+
+    // 密碼雜湊（簡化版：SHA-256(password + email)）
+    const password_hash = createHash('sha256').update(`${password}:${lowerEmail}`).digest('hex');
+
+    // 寫入 CRM 會員表
+    const insertPayload = {
+      phone: String(phone),
+      email: lowerEmail,
+      name: String(name),
+      password_hash,
+      preferences: {},
+      is_active: true,
+      terms_accepted: !!terms_accepted,
+      marketing_consent: !!marketing_consent,
+    } as any;
+
+    const { data: created, error: insertErr } = await supabase
+      .from('customer_users')
+      .insert(insertPayload)
+      .select('*')
+      .maybeSingle();
+
+    if (insertErr || !created) {
+      console.error('註冊寫入 customer_users 失敗:', insertErr);
+      const isDev = process.env.NODE_ENV !== 'production';
+      const hint = (!process.env.SUPABASE_SERVICE_ROLE_KEY)
+        ? '缺少 SUPABASE_SERVICE_ROLE_KEY，伺服器端使用 anon key 可能無法寫入（RLS）'
+        : undefined;
+      // 常見：code 42501 權限不足（RLS/政策）
+      const payload: any = { error: '建立會員失敗' };
+      if (isDev) {
+        payload.detail = insertErr;
+        if (hint) payload.hint = hint;
+      }
+      return NextResponse.json(payload, { status: 500 });
+    }
+
+    // 建立登入 token 並設 Cookie
+    const tokenData = {
+      customer_id: created.id,
+      email: created.email,
+      phone: created.phone,
+      name: created.name,
+      membership_level: 'regular',
+      exp: Date.now() + 7 * 24 * 60 * 60 * 1000,
+    };
+    const token = Buffer.from(JSON.stringify(tokenData)).toString('base64');
+    const response = NextResponse.json({
       success: true,
       message: '會員註冊成功',
       customer: {
-        customer_id: customerId,
-        name,
-        email,
-        phone,
-        created_at: new Date().toISOString(),
-        membership_level: 'regular',
-        note: '由於資料庫限制，會員功能目前有限。您仍可使用電話查詢訂位記錄。'
-      }
+        customer_id: created.id,
+        name: created.name,
+        email: created.email,
+        phone: created.phone,
+        created_at: created.created_at,
+        membership_level: 'regular'
+      },
+      token
     });
+    response.cookies.set('auth-token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 60 * 60 * 24 * 7
+    });
+    return response;
 
   } catch (error) {
     console.error('註冊API錯誤:', error);

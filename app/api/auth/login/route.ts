@@ -13,55 +13,53 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 由於沒有 customers 資料表，我們提供一個臨時的登入方式
-    // 在實際應用中，您需要建立 customers 資料表
-    
-    // 簡單的示範登入邏輯（僅供測試）
-    if (email === 'test@example.com' && password === '123456') {
-      // 生成簡單的token（基於時間戳和用戶資訊）
-      const tokenData = JSON.stringify({
-        customer_id: 'demo-customer-id',
-        email: email,
-        name: '測試用戶',
-        membership_level: 'regular',
-        exp: Date.now() + (7 * 24 * 60 * 60 * 1000) // 7天後過期
-      });
-      
-      const token = Buffer.from(tokenData).toString('base64');
+    // 先嘗試以 CRM 會員表登入
+    const lowerEmail = String(email).trim().toLowerCase();
+    const password_hash = createHash('sha256').update(`${password}:${lowerEmail}`).digest('hex');
+    const supabase = supabaseServer();
 
-      // 回傳會員資料
-      const customerData = {
-        customer_id: 'demo-customer-id',
-        name: '測試用戶',
-        email: email,
-        phone: '0900000000',
+    const { data: customer, error: loginErr } = await supabase
+      .from('customer_users')
+      .select('id, name, email, phone, is_active')
+      .eq('email', lowerEmail)
+      .eq('password_hash', password_hash)
+      .eq('is_active', true)
+      .maybeSingle();
+
+    if (customer?.id) {
+      const tokenData = {
+        customer_id: customer.id,
+        email: customer.email,
+        phone: customer.phone,
+        name: customer.name,
         membership_level: 'regular',
-        status: 'active'
+        exp: Date.now() + 7 * 24 * 60 * 60 * 1000
       };
-
+      const token = Buffer.from(JSON.stringify(tokenData)).toString('base64');
       const response = NextResponse.json({
         success: true,
         message: '登入成功',
-        customer: customerData,
-        token,
-        note: '這是示範登入，實際部署需要建立 customers 資料表'
+        customer: {
+          customer_id: customer.id,
+          name: customer.name,
+          email: customer.email,
+          phone: customer.phone,
+          membership_level: 'regular',
+          status: 'active'
+        },
+        token
       });
-
-      // 設定Cookie
       response.cookies.set('auth-token', token, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
-        maxAge: 60 * 60 * 24 * 7 // 7天
+        maxAge: 60 * 60 * 24 * 7
       });
-
       return response;
     }
 
     // 如果不是測試帳戶，檢查是否為現有的訂位客戶
-    const supabase = supabaseServer();
-    
-    const { data: reservations, error } = await supabase
+  const { data: reservations, error } = await supabase
       .from('table_reservations')
       .select('customer_name, customer_phone, customer_notes')
       .ilike('customer_notes', `%${email}%`)

@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { CalendarDaysIcon, ClockIcon, UserGroupIcon, PhoneIcon } from '@heroicons/react/24/outline'
 
 export default function QuickBooking({ compact = false, bare = false }: { compact?: boolean; bare?: boolean }) {
@@ -16,6 +16,27 @@ export default function QuickBooking({ compact = false, bare = false }: { compac
     '11:30', '12:00', '12:30', '13:00', '13:30', '17:30', 
     '18:00', '18:30', '19:00', '19:30', '20:00', '20:30'
   ]
+
+  // 依台北時區過濾「今天」的已過去時段
+  const filteredTimeSlots = useMemo(() => {
+    if (!formData.date) return timeSlots
+    try {
+      const now = new Date()
+      const nowUtc = now.getTime() + now.getTimezoneOffset() * 60 * 1000
+      const taipei = new Date(nowUtc + 8 * 60 * 60 * 1000)
+      const yyyy = taipei.getFullYear().toString().padStart(4, '0')
+      const mm = (taipei.getMonth() + 1).toString().padStart(2, '0')
+      const dd = taipei.getDate().toString().padStart(2, '0')
+      const today = `${yyyy}-${mm}-${dd}`
+      if (formData.date !== today) return timeSlots
+      const hh = taipei.getHours().toString().padStart(2, '0')
+      const mi = taipei.getMinutes().toString().padStart(2, '0')
+      const current = `${hh}:${mi}`
+      return timeSlots.filter(t => t >= current)
+    } catch {
+      return timeSlots
+    }
+  }, [formData.date, timeSlots])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -86,7 +107,7 @@ export default function QuickBooking({ compact = false, bare = false }: { compac
             ))}
           </div>
           <div className="grid grid-cols-3 gap-2">
-            {timeSlots.slice(0, 6).map((time) => (
+            {filteredTimeSlots.slice(0, 6).map((time) => (
               <button key={time} type="button" onClick={() => setFormData({ ...formData, time })} className={`p-2 text-sm ${formData.time === time ? 'pixel-btn' : 'pixel-chip'}`}>
                 {time}
               </button>
@@ -126,7 +147,7 @@ export default function QuickBooking({ compact = false, bare = false }: { compac
         <div>
           <label className="block text-sm font-pixel mb-2">用餐時間</label>
           <div className="grid grid-cols-4 gap-2">
-            {timeSlots.map((time) => (
+            {filteredTimeSlots.map((time) => (
               <button
                 key={time}
                 type="button"

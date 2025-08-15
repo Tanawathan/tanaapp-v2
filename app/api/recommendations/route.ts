@@ -378,6 +378,27 @@ export async function GET(request: NextRequest) {
   // 讀取營業時間（優先 restaurants.business_hours/settings；否則使用預設或相容表）
   const hours = await loadBusinessHoursForDate(date)
     const timeSlots = generateTimeSlots(hours)
+    // 若為今天（以台北時區判斷），過濾掉已過去的時間
+    try {
+      const now = new Date()
+      // 轉為 UTC 再加上台北偏移，避免受主機時區影響
+      const nowUtcMs = now.getTime() + now.getTimezoneOffset() * 60 * 1000
+      const taipeiMs = nowUtcMs + 8 * 60 * 60 * 1000 // UTC+8
+      const taipeiNow = new Date(taipeiMs)
+      const yyyy = taipeiNow.getFullYear().toString().padStart(4, '0')
+      const mm = (taipeiNow.getMonth() + 1).toString().padStart(2, '0')
+      const dd = taipeiNow.getDate().toString().padStart(2, '0')
+      const todayTaipei = `${yyyy}-${mm}-${dd}`
+      if (date === todayTaipei) {
+        const hh = taipeiNow.getHours().toString().padStart(2, '0')
+        const mi = taipeiNow.getMinutes().toString().padStart(2, '0')
+        const currentHHMM = `${hh}:${mi}`
+        // 僅保留「現在或之後」的時段
+        for (let i = timeSlots.length - 1; i >= 0; i--) {
+          if (timeSlots[i] < currentHHMM) timeSlots.splice(i, 1)
+        }
+      }
+    } catch {}
 
     // 讀取當日預約（僅該餐廳、有效狀態），之後在記憶體內做 30 分鐘判定
   const restaurantId = process.env.RESTAURANT_ID || null
@@ -437,7 +458,7 @@ export async function GET(request: NextRequest) {
       blockedCount?: number
     }> = []
 
-    // 檢查每個時段的可用性
+  // 檢查每個時段的可用性（timeSlots 已去除過去時段）
     for (const timeSlot of timeSlots) {
       const datetime = `${date}T${timeSlot}:00+08:00`
   const result = buildSlotAvailability(datetime, partySize, activeTables, dayReservations || [], hours.interval)

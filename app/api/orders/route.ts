@@ -92,6 +92,17 @@ export async function POST(req: Request) {
   // 嘗試綁定 CRM 顧客（customer_users）
   try {
     let customerId: string | null = null
+    // a) 從 auth cookie 自動帶入
+    const cookieHeader = req.headers.get('cookie') || ''
+    const m = cookieHeader.match(/auth-token=([^;]+)/)
+    if (m) {
+      try {
+        const token = JSON.parse(Buffer.from(m[1], 'base64').toString())
+        if (token?.exp > Date.now() && token?.customer_id) {
+          customerId = token.customer_id
+        }
+      } catch {}
+    }
     if (body.customer_id) {
       customerId = body.customer_id
     } else if (body.customer_phone || body.customer_email) {

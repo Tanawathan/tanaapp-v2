@@ -40,16 +40,40 @@ export async function GET(request: NextRequest) {
 
     const supabase = supabaseServer();
 
-    // 模擬會員基本資料（因為沒有 customers 資料表）
-    const customer = {
-      customer_id: userData.customer_id,
-      name: userData.name,
-      email: userData.email,
-      phone: userData.phone || '0900000000',
-      membership_level: userData.membership_level || 'regular',
-      created_at: new Date().toISOString(),
-      status: 'active'
-    };
+    // 以 CRM customer_users 為主回傳會員基本資料
+    let customer: any = null
+    try {
+      if (userData.customer_id) {
+        const { data } = await supabase
+          .from('customer_users')
+          .select('id, name, email, phone, is_active, created_at')
+          .eq('id', userData.customer_id)
+          .maybeSingle()
+        if (data) {
+          customer = {
+            customer_id: data.id,
+            name: data.name,
+            email: data.email,
+            phone: data.phone,
+            membership_level: userData.membership_level || 'regular',
+            created_at: data.created_at,
+            status: data.is_active ? 'active' : 'inactive'
+          }
+        }
+      }
+      if (!customer) {
+        // fallback：用 token 中的資料
+        customer = {
+          customer_id: userData.customer_id,
+          name: userData.name,
+          email: userData.email,
+          phone: userData.phone || '0900000000',
+          membership_level: userData.membership_level || 'regular',
+          created_at: new Date().toISOString(),
+          status: 'active'
+        }
+      }
+    } catch {}
 
     // 取得該會員的訂位記錄：同時查 table_reservations 與 customer_reservations（CRM），取用真實最新狀態
     let reservations: any[] = [];
@@ -59,6 +83,7 @@ export async function GET(request: NextRequest) {
       id,
       customer_name,
       customer_phone,
+      customer_email,
       party_size,
       reservation_time,
       status,
@@ -68,24 +93,46 @@ export async function GET(request: NextRequest) {
       created_at
     `
     try {
-      let tr: any[] = []
+      const buckets: any[][] = []
+      // 1) 依電話
       if (userData.phone) {
         const { data, error } = await supabase
           .from('table_reservations')
           .select(selectTable)
           .eq('customer_phone', userData.phone)
           .order('reservation_time', { ascending: false })
-        if (!error && data) tr = data
+        if (!error && data) buckets.push(data)
       }
-      if ((!tr || tr.length === 0) && userData.email) {
+      // 2) 依 email 直接比對欄位（新資料走這條）
+      if (userData.email) {
+        const { data, error } = await supabase
+          .from('table_reservations')
+          .select(selectTable)
+          .ilike('customer_email', `%${userData.email}%`)
+          .order('reservation_time', { ascending: false })
+        if (!error && data) buckets.push(data)
+      }
+      // 3) 舊 fallback：notes 內包含 email
+      if (userData.email) {
         const { data, error } = await supabase
           .from('table_reservations')
           .select(selectTable)
           .ilike('customer_notes', `%${userData.email}%`)
           .order('reservation_time', { ascending: false })
-        if (!error && data) tr = data
+        if (!error && data) buckets.push(data)
       }
-      if (tr?.length) reservations = reservations.concat(tr.map(r => ({ ...r, _source: 'table_reservations' })))
+      // 合併 + 去重
+      if (buckets.length) {
+        const merged = ([] as any[]).concat(...buckets)
+        const seen = new Set<string>()
+        const uniq = merged.filter(r => {
+          const id = String(r.id)
+          if (seen.has(id)) return false
+          seen.add(id)
+          return true
+        })
+        reservations = reservations.concat(uniq.map(r => ({ ...r, _source: 'table_reservations' })))
+      }
     } catch (e) {
       console.log('查詢 table_reservations 失敗:', e)
     }
@@ -112,7 +159,8 @@ export async function GET(request: NextRequest) {
           .from('customer_reservations')
           .select(selectCRM)
           .eq('customer_id', userData.customer_id)
-          .order('created_at', { ascending: false })
+          .order('reservation_date', { ascending: false })
+          .order('reservation_time', { ascending: false })
         if (!error && data) cr = data
       }
       if ((!cr || cr.length === 0) && userData.phone) {
@@ -120,7 +168,8 @@ export async function GET(request: NextRequest) {
           .from('customer_reservations')
           .select(selectCRM)
           .eq('contact_phone', userData.phone)
-          .order('created_at', { ascending: false })
+          .order('reservation_date', { ascending: false })
+          .order('reservation_time', { ascending: false })
         if (!error && data) cr = data
       }
       if ((!cr || cr.length === 0) && userData.email) {
@@ -128,7 +177,8 @@ export async function GET(request: NextRequest) {
           .from('customer_reservations')
           .select(selectCRM)
           .ilike('contact_email', `%${userData.email}%`)
-          .order('created_at', { ascending: false })
+          .order('reservation_date', { ascending: false })
+          .order('reservation_time', { ascending: false })
         if (!error && data) cr = data
       }
       if (cr?.length) {
@@ -210,16 +260,16 @@ export async function PUT(request: NextRequest) {
 
     const supabase = supabaseServer();
 
-    // 更新會員資料
-    const { data: updatedCustomer, error } = await supabase
-      .from('customers')
+    // 更新 CRM 會員資料（customer_users）
+    const { data: updated, error } = await supabase
+      .from('customer_users')
       .update({
         name,
         phone,
         updated_at: new Date().toISOString()
       })
-      .eq('customer_id', userData.customer_id)
-      .select('customer_id, name, email, phone, membership_level, created_at')
+      .eq('id', userData.customer_id)
+      .select('id, name, email, phone, created_at, is_active')
       .single();
 
     if (error) {
@@ -233,7 +283,15 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json({
       success: true,
       message: '會員資料更新成功',
-      customer: updatedCustomer
+      customer: updated ? {
+        customer_id: updated.id,
+        name: updated.name,
+        email: updated.email,
+        phone: updated.phone,
+        membership_level: 'regular',
+        created_at: updated.created_at,
+        status: updated.is_active ? 'active' : 'inactive'
+      } : null
     });
 
   } catch (error) {

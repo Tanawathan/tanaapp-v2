@@ -268,7 +268,7 @@ export async function POST(req: Request) {
 
     console.log('Attempting to insert reservation with table assignment:', { ...insert, table_id: insert.table_id || '(not assigned)' })
     const sb = supabaseServer()
-    const { data, error } = await sb.from('table_reservations').insert(insert).select('*').single()
+  const { data, error } = await sb.from('table_reservations').insert(insert).select('*').single()
     
     if (error) {
       console.error('Supabase insert error:', error)
@@ -281,6 +281,28 @@ export async function POST(req: Request) {
     }
 
     console.log('Successfully inserted reservation:', data)
+
+    // 若為登入會員，同步寫入 CRM customer_reservations
+    if (customerData?.customer_id) {
+      try {
+        const crm = {
+          customer_id: customerData.customer_id,
+          table_id: data.table_id || null,
+          reservation_date: String(payload.reservation_date),
+          reservation_time: String(payload.reservation_time),
+          party_size: Number(payload.party_size) || 1,
+          status: 'confirmed',
+          special_requests: payload.special_requests || null,
+          contact_phone: payload.customer_phone || null,
+          contact_email: payload.customer_email || null,
+          notes: `table_reservation_id=${data.id}`,
+        }
+        await sb.from('customer_reservations').insert(crm as any)
+      } catch (e) {
+        console.warn('mirror to customer_reservations failed:', (e as Error).message)
+      }
+    }
+
     return NextResponse.json({ 
       data,
       assignedTable: chosen,

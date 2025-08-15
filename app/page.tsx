@@ -1,7 +1,7 @@
 import TopNavbar from '../components/TopNavbar'
 import MarqueeRibbon from '../components/MarqueeRibbon'
 import MenuCards from '../components/MenuCards'
-import { CalendarDaysIcon, PhoneIcon, ShoppingBagIcon, BookOpenIcon } from '@heroicons/react/24/outline'
+import { CalendarDaysIcon, PhoneIcon, ShoppingBagIcon, BookOpenIcon, UserIcon } from '@heroicons/react/24/outline'
 import Link from 'next/link'
 import { headers } from 'next/headers'
 
@@ -68,27 +68,36 @@ export default async function Home() {
               </div>
             </div>
 
-            {/* 快捷功能卡片 */}
+            {/* 快捷功能卡片（避免與上方重複） */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              <Link 
-                href="/book"
-                className="group p-4 pixel-card"
-              >
+              {/* 我的預約（查詢） */}
+              <Link href="/reservations" className="group p-4 pixel-card">
                 <div className="flex items-center gap-3 mb-2">
                   <div className="p-2 pixel-chip">
                     <CalendarDaysIcon className="w-6 h-6 text-violet-600" />
                   </div>
                   <div>
-                    <h3 className="font-pixel text-lg">線上預約</h3>
-                    <p className="text-sm">快速預約座位</p>
+                    <h3 className="font-pixel text-lg">我的預約</h3>
+                    <p className="text-sm">查詢與管理訂位</p>
                   </div>
                 </div>
               </Link>
 
-              <Link 
-                href="/order"
-                className="group p-4 pixel-card"
-              >
+              {/* 會員中心 */}
+              <Link href="/member" className="group p-4 pixel-card">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="p-2 pixel-chip">
+                    <UserIcon className="w-6 h-6 text-blue-600" />
+                  </div>
+                  <div>
+                    <h3 className="font-pixel text-lg">會員中心</h3>
+                    <p className="text-sm">查看個人資料與記錄</p>
+                  </div>
+                </div>
+              </Link>
+
+              {/* 線上點餐（保留唯一入口） */}
+              <Link href="/order" className="group p-4 pixel-card">
                 <div className="flex items-center gap-3 mb-2">
                   <div className="p-2 pixel-chip">
                     <ShoppingBagIcon className="w-6 h-6 text-pink-600" />
@@ -96,21 +105,6 @@ export default async function Home() {
                   <div>
                     <h3 className="font-pixel text-lg">線上點餐</h3>
                     <p className="text-sm">即將推出</p>
-                  </div>
-                </div>
-              </Link>
-
-              <Link 
-                href="/menu"
-                className="group p-4 pixel-card sm:col-span-2 lg:col-span-1"
-              >
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="p-2 pixel-chip">
-                    <BookOpenIcon className="w-6 h-6 text-orange-600" />
-                  </div>
-                  <div>
-                    <h3 className="font-pixel text-lg">菜單瀏覽</h3>
-                    <p className="text-sm">查看所有菜品</p>
                   </div>
                 </div>
               </Link>

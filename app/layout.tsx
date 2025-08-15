@@ -1,6 +1,7 @@
 import './globals.css'
 import type { Metadata } from 'next'
 import { VT323 } from 'next/font/google'
+import { CartProvider } from '../src/contexts/CartContext'
 
 const vt323 = VT323({ subsets: ['latin'], weight: '400', variable: '--font-vt323' })
 
@@ -30,7 +31,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           `}}
         />
       </head>
-      <body className={`${vt323.variable} min-h-screen pixel-bg text-pixel-ink`}>{children}</body>
+      <body className={`${vt323.variable} min-h-screen pixel-bg text-pixel-ink`}>
+        <CartProvider>
+          {children}
+        </CartProvider>
+      </body>
     </html>
   )
 }

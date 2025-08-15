@@ -588,8 +588,8 @@ export default function BookPage() {
                     <div className="mb-2 text-green-700">{successData.message}</div>
                   )}
                   您可前往
-                  <Link className="px-1 font-semibold text-green-700 underline" href="/reservations">我的預約</Link>
-                  輸入電話查詢詳細資訊。
+                  <Link className="px-1 font-semibold text-green-700 underline" href="/member">我的預約</Link>
+                  查看與管理您的訂位。
                 </div>
               </div>
             )}

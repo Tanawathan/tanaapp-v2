@@ -21,7 +21,7 @@ interface Category {
   display_order?: number
 }
 
-export default function MenuCards({ maxItems }: { maxItems?: number } = {}) {
+export default function MenuCards({ maxItems, hideAddToCart }: { maxItems?: number; hideAddToCart?: boolean } = {}) {
   const [products, setProducts] = useState<Product[]>([])
   const [categories, setCategories] = useState<Category[]>([])
   const [loading, setLoading] = useState(true)
@@ -249,13 +249,15 @@ export default function MenuCards({ maxItems }: { maxItems?: number } = {}) {
                   </div>
                 )}
 
-                {/* 加入購物車按鈕 */}
-                <button
-                  disabled={!product.is_available}
-      className={`w-full py-2 px-4 ${product.is_available ? 'pixel-btn' : 'pixel-chip opacity-60 cursor-not-allowed'}`}
-                >
-                  {product.is_available ? '加入購物車' : '暫時缺貨'}
-                </button>
+                {/* 加入購物車按鈕（可隱藏） */}
+                {hideAddToCart ? null : (
+                  <button
+                    disabled={!product.is_available}
+                    className={`w-full py-2 px-4 ${product.is_available ? 'pixel-btn' : 'pixel-chip opacity-60 cursor-not-allowed'}`}
+                  >
+                    {product.is_available ? '加入購物車' : '暫時缺貨'}
+                  </button>
+                )}
               </div>
             </div>
           ))}

@@ -42,8 +42,11 @@ export default function MemberPage() {
   const [reservations, setReservations] = useState<Reservation[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [activeTab, setActiveTab] = useState<'profile' | 'reservations'>('reservations')
+  const [activeTab, setActiveTab] = useState<'profile' | 'reservations' | 'orders'>('reservations')
   const router = useRouter()
+
+  const [orders, setOrders] = useState<any[]>([])
+  const [ordersLoading, setOrdersLoading] = useState(false)
 
   // 編輯資料狀態
   const [editMode, setEditMode] = useState(false)
@@ -64,6 +67,10 @@ export default function MemberPage() {
   useEffect(() => {
     fetchMemberData()
   }, [])
+
+  useEffect(() => {
+    if (customer) loadOrders()
+  }, [customer])
 
   async function fetchMemberData() {
     try {
@@ -94,7 +101,26 @@ export default function MemberPage() {
       console.error('取得會員資料錯誤:', err)
       setError((err as Error).message)
     } finally {
-      setLoading(false)
+      setLoading(false
+      )
+    }
+  }
+
+  async function loadOrders() {
+    try {
+      setOrdersLoading(true)
+      const q = customer?.customer_id
+        ? `customer_id=${encodeURIComponent(customer.customer_id)}`
+        : (customer?.phone
+          ? `phone=${encodeURIComponent(customer.phone)}`
+          : (customer?.email ? `email=${encodeURIComponent(customer.email)}` : ''))
+      const res = await fetch(`/api/orders?${q}&limit=50`, { cache: 'no-store' })
+      const data = await res.json()
+      setOrders(data.orders || [])
+    } catch (e) {
+      console.error('載入訂單失敗', e)
+    } finally {
+      setOrdersLoading(false)
     }
   }
 
@@ -333,6 +359,16 @@ export default function MemberPage() {
             訂位記錄 ({reservations.length})
           </button>
           <button
+            onClick={() => setActiveTab('orders')}
+            className={`py-2 px-1 border-b-2 font-medium text-sm ${
+              activeTab === 'orders' 
+                ? 'border-indigo-500 text-indigo-600' 
+                : 'border-transparent text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            我的訂單 ({orders.length})
+          </button>
+          <button
             onClick={() => setActiveTab('profile')}
             className={`py-2 px-1 border-b-2 font-medium text-sm ${
               activeTab === 'profile' 
@@ -504,6 +540,58 @@ export default function MemberPage() {
                         </div>
                       </div>
                     )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'orders' && (
+        <div className="bg-white rounded-lg border">
+          <div className="px-4 py-5 sm:p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-medium text-gray-900">我的訂單</h3>
+              <Link href="/order" className="inline-flex items-center px-3 py-2 text-sm rounded-md text-white bg-indigo-600 hover:bg-indigo-700">去點餐</Link>
+            </div>
+
+            {ordersLoading ? (
+              <div className="text-center py-8 text-gray-500">載入中…</div>
+            ) : orders.length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-gray-500 mb-4">您還沒有任何訂單</p>
+                <Link href="/order" className="inline-flex items-center px-4 py-2 text-sm rounded-md text-white bg-indigo-600 hover:bg-indigo-700">開始點餐</Link>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {orders.map((o) => (
+                  <div key={o.id} className="border rounded-lg p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="text-sm text-gray-500">訂單編號</div>
+                        <div className="font-medium">{o.order_number}</div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-sm text-gray-500">狀態</div>
+                        <div className="font-medium">{o.status || 'pending'}</div>
+                      </div>
+                    </div>
+                    <div className="mt-2 grid grid-cols-2 gap-4 text-sm text-gray-600">
+                      <div>建立時間：{o.created_at ? new Date(o.created_at).toLocaleString('zh-TW') : '-'}</div>
+                      <div>類型：{o.order_type || 'dine_in'}</div>
+                      <div>小計：NT$ {Number(o.subtotal || 0)}</div>
+                      <div>總計：NT$ {Number(o.total_amount || 0)}</div>
+                    </div>
+                    <div className="mt-2 text-xs text-gray-500">
+                      <div>ID：{o.id?.slice?.(0, 8)}…（Supabase）</div>
+                      {Array.isArray(o.order_items) && (
+                        <div>品項數：{o.order_items.length}</div>
+                      )}
+                    </div>
+                    <div className="mt-3 flex gap-2">
+                      <Link href={`/orders/${o.id}`} className="px-3 py-1 text-sm rounded-md border hover:bg-gray-50">查看</Link>
+                    </div>
                   </div>
                 ))}
               </div>

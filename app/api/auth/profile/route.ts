@@ -51,62 +51,111 @@ export async function GET(request: NextRequest) {
       status: 'active'
     };
 
-    // 取得該會員的訂位記錄（根據電話或email）
+    // 取得該會員的訂位記錄：同時查 table_reservations 與 customer_reservations（CRM），取用真實最新狀態
     let reservations: any[] = [];
-    
-    // 先嘗試用電話查詢
-    if (userData.phone) {
-      const { data: phoneReservations, error: phoneError } = await supabase
-        .from('table_reservations')
-        .select(`
-          id,
-          customer_name,
-          customer_phone,
-          party_size,
-          reservation_time,
-          status,
-          special_requests,
-          customer_notes,
-          duration_minutes,
-          created_at
-        `)
-        .eq('customer_phone', userData.phone)
-        .order('reservation_time', { ascending: false });
 
-      if (!phoneError) {
-        reservations = phoneReservations || [];
-        console.log(`使用電話 ${userData.phone} 找到 ${reservations.length} 筆預約記錄`);
-      } else {
-        console.log('電話查詢預約記錄錯誤:', phoneError);
+    // A) table_reservations by phone / email（舊有來源）
+    const selectTable = `
+      id,
+      customer_name,
+      customer_phone,
+      party_size,
+      reservation_time,
+      status,
+      special_requests,
+      customer_notes,
+      duration_minutes,
+      created_at
+    `
+    try {
+      let tr: any[] = []
+      if (userData.phone) {
+        const { data, error } = await supabase
+          .from('table_reservations')
+          .select(selectTable)
+          .eq('customer_phone', userData.phone)
+          .order('reservation_time', { ascending: false })
+        if (!error && data) tr = data
       }
+      if ((!tr || tr.length === 0) && userData.email) {
+        const { data, error } = await supabase
+          .from('table_reservations')
+          .select(selectTable)
+          .ilike('customer_notes', `%${userData.email}%`)
+          .order('reservation_time', { ascending: false })
+        if (!error && data) tr = data
+      }
+      if (tr?.length) reservations = reservations.concat(tr.map(r => ({ ...r, _source: 'table_reservations' })))
+    } catch (e) {
+      console.log('查詢 table_reservations 失敗:', e)
     }
 
-    // 如果沒找到，嘗試用email查詢（在customer_notes中）
-    if (reservations.length === 0 && userData.email) {
-      const { data: emailReservations, error: emailError } = await supabase
-        .from('table_reservations')
-        .select(`
-          id,
-          customer_name,
-          customer_phone,
-          party_size,
-          reservation_time,
-          status,
-          special_requests,
-          customer_notes,
-          duration_minutes,
-          created_at
-        `)
-        .ilike('customer_notes', `%${userData.email}%`)
-        .order('reservation_time', { ascending: false });
-
-      if (!emailError) {
-        reservations = emailReservations || [];
-        console.log(`使用Email ${userData.email} 找到 ${reservations.length} 筆預約記錄`);
-      } else {
-        console.log('Email查詢預約記錄錯誤:', emailError);
+    // B) customer_reservations（CRM）：優先以 customer_id，其次 phone/email
+    const selectCRM = `
+      id,
+      customer_id,
+      table_id,
+      reservation_date,
+      reservation_time,
+      party_size,
+      status,
+      special_requests,
+      contact_phone,
+      contact_email,
+      notes,
+      created_at
+    `
+    try {
+      let cr: any[] = []
+      if (userData.customer_id) {
+        const { data, error } = await supabase
+          .from('customer_reservations')
+          .select(selectCRM)
+          .eq('customer_id', userData.customer_id)
+          .order('created_at', { ascending: false })
+        if (!error && data) cr = data
       }
+      if ((!cr || cr.length === 0) && userData.phone) {
+        const { data, error } = await supabase
+          .from('customer_reservations')
+          .select(selectCRM)
+          .eq('contact_phone', userData.phone)
+          .order('created_at', { ascending: false })
+        if (!error && data) cr = data
+      }
+      if ((!cr || cr.length === 0) && userData.email) {
+        const { data, error } = await supabase
+          .from('customer_reservations')
+          .select(selectCRM)
+          .ilike('contact_email', `%${userData.email}%`)
+          .order('created_at', { ascending: false })
+        if (!error && data) cr = data
+      }
+      if (cr?.length) {
+        // 正規化成前端需要的欄位結構
+        const normalized = cr.map(r => ({
+          id: r.id,
+          customer_name: customer.name,
+          customer_phone: r.contact_phone,
+          party_size: r.party_size,
+          reservation_time: r.reservation_date && r.reservation_time
+            ? new Date(`${r.reservation_date}T${r.reservation_time}`).toISOString()
+            : r.created_at,
+          status: r.status,
+          special_requests: r.special_requests,
+          customer_notes: r.notes,
+          duration_minutes: null,
+          created_at: r.created_at,
+          _source: 'customer_reservations'
+        }))
+        reservations = reservations.concat(normalized)
+      }
+    } catch (e) {
+      console.log('查詢 customer_reservations 失敗:', e)
     }
+
+    // 排序（以 reservation_time 或 created_at 由新到舊）
+    reservations.sort((a, b) => new Date(b.reservation_time || b.created_at).getTime() - new Date(a.reservation_time || a.created_at).getTime())
 
     console.log('最終返回的預約記錄數量:', reservations.length);
     

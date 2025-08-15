@@ -107,7 +107,7 @@ export default function TopNavbar() {
                     <Link href="/member" className="block px-4 py-2 text-sm hover:underline">
                       會員中心
                     </Link>
-                    <Link href="/reservations" className="block px-4 py-2 text-sm hover:underline">
+                    <Link href="/member" className="block px-4 py-2 text-sm hover:underline">
                       我的預約
                     </Link>
                     <button 

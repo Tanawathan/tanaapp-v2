@@ -70,8 +70,8 @@ export default async function Home() {
 
             {/* 快捷功能卡片（避免與上方重複） */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {/* 我的預約（查詢） */}
-              <Link href="/reservations" className="group p-4 pixel-card">
+              {/* 我的預約（改導向會員中心） */}
+              <Link href="/member" className="group p-4 pixel-card">
                 <div className="flex items-center gap-3 mb-2">
                   <div className="p-2 pixel-chip">
                     <CalendarDaysIcon className="w-6 h-6 text-violet-600" />
@@ -112,9 +112,9 @@ export default async function Home() {
 
             {/* 快速預約已移除 */}
 
-            {/* 推薦菜單：2/3/4 欄自適應（首頁只顯示 8 筆） */}
+            {/* 推薦菜單：2/3/4 欄自適應（首頁只顯示 8 筆；首頁隱藏加入購物車按鈕） */}
             <div className="pixel-card p-6">
-              <MenuCards maxItems={8} />
+              <MenuCards maxItems={8} hideAddToCart />
             </div>
 
             {/* 餐廳資訊（可展開） - 由 Supabase API 提供 */}

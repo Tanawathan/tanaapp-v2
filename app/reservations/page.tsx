@@ -1,9 +1,6 @@
 import Link from 'next/link'
 import { headers } from 'next/headers'
-import dynamic from 'next/dynamic'
-
-// 客端元件（避免 SSR）
-const PassModal = dynamic(() => import('../../components/PassModal'), { ssr: false })
+// 入場證功能已刪除
 
 // 桌位對照表
 const TABLE_NAMES: Record<number, { name: string; type: string }> = {
@@ -84,7 +81,7 @@ export default async function ReservationsPage({ searchParams }: { searchParams:
               </div>
               <div className="flex flex-col items-end gap-1">
                 <div className="text-xs text-gray-400">{new Date(r.created_at).toLocaleString('zh-TW')}</div>
-                <PassModal res={r} />
+                {/* 入場證功能已刪除 */}
               </div>
             </div>
           </li>

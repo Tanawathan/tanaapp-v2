@@ -3,8 +3,28 @@ import MarqueeRibbon from '../components/MarqueeRibbon'
 import MenuCards from '../components/MenuCards'
 import { CalendarDaysIcon, PhoneIcon, ShoppingBagIcon, BookOpenIcon } from '@heroicons/react/24/outline'
 import Link from 'next/link'
+import { headers } from 'next/headers'
 
-export default function Home() {
+type InfoLine = { label: string; text: string }
+
+export default async function Home() {
+  // 讀取 Supabase API 的餐廳資訊（電話、地址、營業時間）
+  let phone = '0901-222-861'
+  let address = '台北市信義區餐廳街123號'
+  let lines: InfoLine[] = []
+  try {
+    const host = headers().get('host') || ''
+    const protocol = process.env.NODE_ENV === 'production' ? 'https' : 'http'
+    const base = host ? `${protocol}://${host}` : ''
+    const res = await fetch(`${base}/api/restaurant`, { next: { revalidate: 60 } })
+    if (res.ok) {
+      const json = await res.json()
+      phone = json?.info?.phone || phone
+      address = json?.info?.address || address
+      lines = Array.isArray(json?.lines) ? json.lines : []
+    }
+  } catch {}
+
   return (
   <div className="min-h-screen">
   {/* 跑馬燈 */}
@@ -39,11 +59,11 @@ export default function Home() {
                   查看菜單
                 </Link>
                 <a 
-                  href="tel:0901222861"
+                  href={`tel:${phone.replace(/\D/g, '')}`}
                   className="flex items-center gap-2 px-4 py-2 pixel-btn"
                 >
                   <PhoneIcon className="w-5 h-5" />
-                  0901-222-861
+                  {phone}
                 </a>
               </div>
             </div>
@@ -103,21 +123,23 @@ export default function Home() {
               <MenuCards maxItems={8} />
             </div>
 
-            {/* 餐廳資訊（可展開） */}
+            {/* 餐廳資訊（可展開） - 由 Supabase API 提供 */}
             <details className="pixel-card p-6" open>
               <summary className="font-pixel text-2xl mb-4 cursor-pointer">餐廳資訊</summary>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 <div>
                   <h3 className="font-pixel text-lg mb-2">營業時間</h3>
                   <div className="space-y-1 text-sm">
-                    <div className="flex justify-between">
-                      <span>週一 ~ 週五</span>
-                      <span>11:30 - 14:30, 17:30 - 21:30</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>週六 ~ 週日</span>
-                      <span>11:30 - 21:30</span>
-                    </div>
+                    {lines?.length ? (
+                      lines.map((l: InfoLine, idx: number) => (
+                        <div key={idx} className="flex justify-between">
+                          <span>{l.label}</span>
+                          <span>{l.text}</span>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="text-gray-500">尚無營業時間資料</div>
+                    )}
                   </div>
                 </div>
                 <div>
@@ -125,13 +147,13 @@ export default function Home() {
                   <div className="space-y-1 text-sm">
                     <div className="flex items-center gap-2">
                       <PhoneIcon className="w-4 h-4" />
-                      <a href="tel:0901222861" className="hover:underline">
-                        0901-222-861
+                      <a href={`tel:${phone.replace(/\D/g, '')}`} className="hover:underline">
+                        {phone}
                       </a>
                     </div>
                     <div className="flex items-center gap-2">
                       <span>📍</span>
-                      <span>台北市信義區餐廳街123號</span>
+                      <span>{address}</span>
                     </div>
                   </div>
                 </div>

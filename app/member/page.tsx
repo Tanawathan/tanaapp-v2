@@ -2,10 +2,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import dynamic from 'next/dynamic'
-
-// 客端入場證元件（避免 SSR 問題）
-const PassModal = dynamic(() => import('../../components/PassModal'), { ssr: false })
+// 入場證功能已刪除
 
 interface Customer {
   customer_id: string;
@@ -110,6 +107,15 @@ export default function MemberPage() {
       router.push('/')
     } catch (err) {
       console.error('登出失敗:', err)
+    }
+  }
+
+  // 返回上一頁（若無歷史則回首頁）
+  function goBack() {
+    if (typeof window !== 'undefined' && window.history.length > 1) {
+      router.back()
+    } else {
+      router.push('/')
     }
   }
 
@@ -274,6 +280,15 @@ export default function MemberPage() {
       {/* 頁面標題 */}
       <div className="flex items-center justify-between mb-6">
         <div>
+          <button
+            type="button"
+            onClick={goBack}
+            className="mb-1 inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700"
+            aria-label="返回上一頁"
+            title="返回上一頁"
+          >
+            <span aria-hidden>←</span> 返回
+          </button>
           <h1 className="text-3xl font-bold tracking-tight">會員中心</h1>
           <p className="text-gray-600">歡迎回來，{customer?.name}</p>
         </div>
@@ -466,8 +481,7 @@ export default function MemberPage() {
                           <div className="text-xs text-gray-400">
                             預約時間：{new Date(reservation.created_at).toLocaleDateString('zh-TW')}
                           </div>
-                          {/* 入場證（所有狀態皆可查看） */}
-                          <div className="mt-1"><PassModal res={reservation} /></div>
+                          {/* 入場證功能已刪除 */}
                           {/* 操作按鈕 */}
                           {(reservation.status === 'pending' || reservation.status === 'confirmed') && (
                             <div className="flex gap-2 mt-2">
